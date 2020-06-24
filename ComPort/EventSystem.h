@@ -2,7 +2,7 @@
 #include <iostream>
 #include "ComPort.h"
 
-
+#define tst
 
 class EventSystem: public IObsTimeBase, public IObsComPort
 {
