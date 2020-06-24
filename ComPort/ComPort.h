@@ -23,7 +23,7 @@ class IObsComPort;
 class ComPort: public SysComPort_t, public IObsTimeBase
 {
 public:
-	
+
 	/***********************************************************
 	 * @brief	Create ComPort object.
 	 * Link com port object with external Rx & Tx Buffers in SysComPort_t path

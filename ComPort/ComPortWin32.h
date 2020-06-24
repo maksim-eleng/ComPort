@@ -35,6 +35,7 @@ public:
 		EVT_ERR_RX_BUF_OVF		= (1 << 8),
 		// Critical errors as com not ready, not open, not handle,...
 		EVT_ERR_CRITICAL			= (1 << 10),
+		EVT_END								= (1 << 11),
 	}comEvtMsk_t;
 
 	/*********************************************************
@@ -82,8 +83,8 @@ public:
 	**********************************************************/
 	typedef enum DTR_CONTROL_ENUM
 	{
-		DTR_DISABLE = DTR_CONTROL_DISABLE,	// DTR out =0ff if COM-port is opened. State can be changed by function EscapeCommFunction()
-		DTR_ENABLE = DTR_CONTROL_ENABLE,	// DTR out =0n if COM-port is opened. State can be changed by function EscapeCommFunction()	
+		DTR_DISABLE		= DTR_CONTROL_DISABLE,	// DTR out =0ff if COM-port is opened. State can be changed by function EscapeCommFunction()
+		DTR_ENABLE		= DTR_CONTROL_ENABLE,	// DTR out =0n if COM-port is opened. State can be changed by function EscapeCommFunction()	
 		DTR_HANDSHAKE = DTR_CONTROL_HANDSHAKE	// DTR out = 0n / Off automatically if COM - port is opened / closed
 	}comDTRControl_t;
 
@@ -189,6 +190,12 @@ public:
 	T_WRITE_TOTAL_CONSTANT,    	/* WriteTotalTimeoutConstant - Constant in milliseconds.	*/
 	}comParamInit_t;
 
+	/**
+	 * @brief 
+	 * @param param 
+	 * @return 
+	*/
+
 	/***************************************************************
 	* @brief Set parameters of com-port. May be used after create object of port and 
 	* if port is opened (if not - the file descriptor not defined).
@@ -199,6 +206,41 @@ public:
 						If error - port handler is closed
 	****************************************************************/
 	comEvtMsk_t setParam(comParamInit_t param, uint32_t val = 0);
+
+	typedef struct COM_PARAM_STRUCT
+	{
+		unsigned char number = 0;
+		comBaud_t baud:4;
+		unsigned char byteSize:4;
+		comStopBit_t stopBits	:4;
+		// if != -1 - fErrorChar will be to On state
+		char  parityChar = -1;				// != -1 - replace on char if parity error & parity != NO
+		char  evtChar = -1;						// != -1 - genegate event if byte was received
+		// if != NO - fParity will be to On state
+		comParity_t parity : 3;
+		comDTRControl_t controlDTR:2;		// control DTR out
+		comRTSControl_t controlRTS:2;		// control RTS out
+		uint8_t fOutxDsrFlow		: 1;	// =1 - transmit only if DSR input = On. Use bool val us second param for on/off
+		uint8_t fOutxCtsFlow		: 1;	// =1 - transmit if CTS input(on PC) (receiver ready) = on.
+		uint8_t fDsrSensitivity	: 1;	// =1 - receive only if DSR input = On. Use bool val us second param for on/off
+		uint8_t fNull						: 1;	// =1 - in Rx stream '\0' will be ignored
+		uint8_t fdefParamIsSet	: 1;	// =1 - requared parameters are set
+	}comCfg_t;
+
+
+	/**
+	 * @brief 
+	 * @param param 
+	 * @return 
+	*/
+	comEvtMsk_t setParam(comCfg_t& param);
+
+	/**
+	 * @brief 
+	 * @param param 
+	 * @return 
+	*/
+	comEvtMsk_t getParam(comCfg_t& param);
 
 	/*****************************************************************
 	 * @brief Check of event.
@@ -255,7 +297,7 @@ public:
 protected:
 	Buffer m_rxBuf;			// buffer for Rx
 	Buffer m_txBuf;			// buffer for Rx
-
+	comCfg_t m_comCfg = {0};
 	/****************************************************************
 	 * @brief Create ComPortWin32 object.
 	 * Link com port object with external Rx & Tx Buffers

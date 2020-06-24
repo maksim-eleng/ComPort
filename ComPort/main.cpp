@@ -11,7 +11,6 @@ using namespace std;
 char rxBuf[SysConst::rxBufSize];
 char txBuf[SysConst::rxBufSize];
 ComPort com(rxBuf, txBuf, sizeof(rxBuf), sizeof(txBuf));
-uint32_t k;
 
 bool convStrToInt(const char* str, int& res)
 {
@@ -45,6 +44,7 @@ int main(int argc, char* argv[])
 	sysClk.addObserver(evt, EVT_1S);
 	sysClk.addObserver(com, EVT_10MS);
 	com.addObserver(evt);
+	
 
 
 	{
@@ -78,6 +78,16 @@ int main(int argc, char* argv[])
 		else
 			std::cout << "Com" << comNum << " found and connected on " << baud;
 	}
+
+	static ComPort::comCfg_t cfg;
+	int k = sizeof(cfg);
+	cfg.number = 1;
+	cfg.baud = com.B_4800;
+	cfg.byteSize = 8;
+	cfg.parity = com.NO;
+	com.setParam(cfg);
+
+
 	events = com.EVT_ERR_CRITICAL;
 	events = com.setParam(com.USE_USER_CHAR_EVENT, '$');
 	events = com.setParam(com.USE_EOF_CHAR_EVENT, '\n');
