@@ -81,10 +81,13 @@ int main(int argc, char* argv[])
 
 	static ComPort::comCfg_t cfg;
 	int k = sizeof(cfg);
+
+
+	
 	cfg.number = 1;
 	cfg.baud = com.B_4800;
 	cfg.byteSize = 8;
-	cfg.parity = com.NO;
+//	cfg.parity = com.NO;
 	com.setParam(cfg);
 
 

@@ -34,14 +34,14 @@ ComPortWin32::comEvtMsk_t ComPortWin32::setParam(comParamInit_t param, uint32_t 
 
     case STOP_BITS: {
       comStopBit_t tmp = static_cast<comStopBit_t>(val);
-      assert(tmp == ONE_BIT || tmp == ONE5_BIT || tmp == TWO_BIT);
+      assert(tmp == SBIT_ONE || tmp == SBIT_ONE5 || tmp == SBIT_TWO);
       dcb.StopBits = (BYTE)val;
     }
     break;
 
     case PARITY_TYPE: {
       comParity_t tmp = static_cast<comParity_t>(val);
-      assert(tmp == NO || tmp == ODD || tmp == EVEN || tmp == MARK || tmp == SPACE);
+      assert(tmp == P_NO || tmp == P_ODD || tmp == P_EVEN || tmp == P_MARK || tmp == P_SPACE);
       dcb.Parity = val;
     }
     break;
@@ -189,31 +189,33 @@ ComPortWin32::comEvtMsk_t ComPortWin32::setParam(comCfg_t& param)
   comEvtMsk_t evt = EVT_NO;
 
   comCfg_t tmpSet;
+
   m_comCfg = param;
+  
   // read from sys DCB to m_comCfg
   if (EVT_NO != getParam(m_comCfg)) {
     return evt;
-  }
+  } 
   // set default parameters in dcb
-  if (!m_comCfg.fdefParamIsSet) {
-    m_comCfg.fdefParamIsSet = true;
-    dcb.fBinary = true;
-    dcb.fOutX = false;
-    dcb.fInX = false;
-    dcb.fAbortOnError = false;
-  }
+  //if (!m_comCfg.fdefParamIsSet) {
+  //  m_comCfg.fdefParamIsSet = true;
+  //  dcb.fBinary = true;
+  //  dcb.fOutX = false;
+  //  dcb.fInX = false;
+  //  dcb.fAbortOnError = false;
+  //}
   //forming comSet struct
-  dcb.BaudRate = param.baud;
-  dcb.ByteSize = param.byteSize;
-  dcb.StopBits = param.stopBits;
-  // if != NO - fParity will be to On state
-  if (param.parity == NO) {
-    dcb.fParity = false;
-  }
-  else {
-    dcb.fParity = true;
-    dcb.Parity = param.parity;
-  }
+  //dcb.BaudRate = param.baud;
+  //dcb.ByteSize = param.byteSize;
+  //dcb.StopBits = param.stopBits;
+  //// if != NO - fParity will be to On state
+  //if (param.parity == NO) {
+  //  dcb.fParity = false;
+  //}
+  //else {
+  //  dcb.fParity = true;
+  //  dcb.Parity = param.parity;
+  //}
   // if fErrorChar != -1 - fErrorChar will be to On state
   if (param.parityChar == -1) {
     dcb.fErrorChar = false;
@@ -223,13 +225,13 @@ ComPortWin32::comEvtMsk_t ComPortWin32::setParam(comCfg_t& param)
     dcb.fErrorChar = param.parityChar;
   }
 
-  dcb.EvtChar = param.evtChar;
-  dcb.fDtrControl = param.controlDTR;
-  dcb.fRtsControl = param.controlRTS;
-  dcb.fOutxDsrFlow = param.fOutxDsrFlow;
-  dcb.fOutxCtsFlow = param.fOutxCtsFlow;
-  dcb.fDsrSensitivity = param.fDsrSensitivity;
-  dcb.fNull = param.fNull;
+  //dcb.EvtChar = param.evtChar;
+  //dcb.fDtrControl = param.controlDTR;
+  //dcb.fRtsControl = param.controlRTS;
+  //dcb.fOutxDsrFlow = param.fOutxDsrFlow;
+  //dcb.fOutxCtsFlow = param.fOutxCtsFlow;
+  //dcb.fDsrSensitivity = param.fDsrSensitivity;
+  //dcb.fNull = param.fNull;
   // DCB struct init
   fPortReady = SetCommState(m_hPort, &dcb);
   if ((!fPortReady) && ERROR_SUCCESS != GetLastError()) {
@@ -408,34 +410,34 @@ ComPortWin32::comEvtMsk_t ComPortWin32::getParam(comCfg_t& param)
   bool fPortReady;
   comEvtMsk_t events = EVT_NO;
 
-  // read system settings
-  fPortReady = GetCommState(m_hPort, &dcb);
-  if (fPortReady || ERROR_SUCCESS == GetLastError()) {
-    //forming comSet struct
-    param.baud = (comBaud_t)dcb.BaudRate;
-    param.byteSize = dcb.ByteSize;
-    param.stopBits = (comStopBit_t)dcb.StopBits;
-    // if fParity not set - parity not use
-    if (!dcb.fParity)
-      param.parity = NO;
-    else
-      param.parity = (comParity_t)dcb.Parity;
-    // if fParity not set - parity not use
-    if (!dcb.fErrorChar)
-      param.parityChar = -1;
-    else
-      param.parityChar = dcb.ErrorChar;
-    param.evtChar = dcb.EvtChar;
-    param.controlDTR = (comDTRControl_t)dcb.fDtrControl;
-    param.controlRTS = (comRTSControl_t)dcb.fRtsControl;
-    param.fOutxDsrFlow = dcb.fOutxDsrFlow;
-    param.fOutxCtsFlow = dcb.fOutxCtsFlow;
-    param.fDsrSensitivity = dcb.fDsrSensitivity;
-    param.fNull = dcb.fNull;
-  }
-  else {
-    setEvent(events, EVT_ERR_CRITICAL);
-  }
+  //// read system settings
+  //fPortReady = GetCommState(m_hPort, &dcb);
+  //if (fPortReady || ERROR_SUCCESS == GetLastError()) {
+  //  //forming comSet struct
+  //  param.baud = (comBaud_t)dcb.BaudRate;
+  //  param.byteSize = dcb.ByteSize;
+  //  param.stopBits = (comStopBit_t)dcb.StopBits;
+  //  // if fParity not set - parity not use
+  //  if (!dcb.fParity)
+  //    param.parity = NO;
+  //  else
+  //    param.parity = (comParity_t)dcb.Parity;
+  //  // if fParity not set - parity not use
+  //  if (!dcb.fErrorChar)
+  //    param.parityChar = -1;
+  //  else
+  //    param.parityChar = dcb.ErrorChar;
+  //  param.evtChar = dcb.EvtChar;
+  //  param.controlDTR = (comDTRControl_t)dcb.fDtrControl;
+  //  param.controlRTS = (comRTSControl_t)dcb.fRtsControl;
+  //  param.fOutxDsrFlow = dcb.fOutxDsrFlow;
+  //  param.fOutxCtsFlow = dcb.fOutxCtsFlow;
+  //  param.fDsrSensitivity = dcb.fDsrSensitivity;
+  //  param.fNull = dcb.fNull;
+  //}
+  //else {
+  //  setEvent(events, EVT_ERR_CRITICAL);
+  //}
 
   return events;
 }
@@ -490,8 +492,8 @@ ComPortWin32::comEvtMsk_t ComPortWin32::open( int comNum, comBaud_t baud )
   if( fPortReady ) {
     dcb.BaudRate = baud;
     dcb.ByteSize = 8;
-    dcb.Parity = NO;
-    dcb.StopBits = ONE_BIT;
+    dcb.Parity = P_NO;
+    dcb.StopBits = SBIT_ONE;
     fPortReady = SetCommState( m_hPort, &dcb );
   }
   

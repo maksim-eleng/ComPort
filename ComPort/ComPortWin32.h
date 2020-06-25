@@ -5,9 +5,14 @@
 #include "SysConst.h"
 #include "Buffer.h"
 
+
+
 class ComPortWin32
 {
 public:
+
+	static constexpr auto COM_NOT_CFG_VALUE = -1;
+
 	/************************************************************
 	 * @brief Com port event masks. Must be set by means of setEvent()
 	 in com module only. Events mask may be check in external path.
@@ -44,13 +49,13 @@ public:
 	**********************************************************/
 	typedef enum BAUD_ENUM
 	{
-		B_NO,
-		B_1200 = CBR_1200,
-		B_2400 = CBR_2400,
-		B_4800 = CBR_4800,
-		B_9600 = CBR_9600,
-		B_38400 = CBR_38400,
-		B_115200 = CBR_115200,
+		B_NOT_CFG	= COM_NOT_CFG_VALUE,
+		B_1200		= CBR_1200,
+		B_2400		= CBR_2400,
+		B_4800		= CBR_4800,
+		B_9600		= CBR_9600,
+		B_38400		= CBR_38400,
+		B_115200	= CBR_115200,
 	}comBaud_t;
 
 	/*********************************************************
@@ -59,11 +64,12 @@ public:
 	**********************************************************/
 	typedef enum PARITY_ENUM
 	{
-		NO = NOPARITY,
-		ODD = ODDPARITY,
-		EVEN = EVENPARITY,
-		MARK = MARKPARITY,
-		SPACE = SPACEPARITY,
+		P_NO		= NOPARITY,
+		P_ODD		= ODDPARITY,
+		P_EVEN	= EVENPARITY,
+		P_MARK	= MARKPARITY,
+		P_SPACE	= SPACEPARITY,
+		P_NOT_CFG = COM_NOT_CFG_VALUE,
 	}comParity_t;
 
 	/*********************************************************
@@ -72,9 +78,10 @@ public:
 	**********************************************************/
 	typedef enum STOP_BIT_ENUM
 	{
-		ONE_BIT = ONESTOPBIT,
-		ONE5_BIT = ONE5STOPBITS,
-		TWO_BIT = TWOSTOPBITS
+		SBIT_ONE		= ONESTOPBIT,
+		SBIT_ONE5		= ONE5STOPBITS,
+		SBIT_TWO		= TWOSTOPBITS,
+		SBIT_NOT_CFG = COM_NOT_CFG_VALUE,
 	}comStopBit_t;
 
 	/*********************************************************
@@ -83,9 +90,10 @@ public:
 	**********************************************************/
 	typedef enum DTR_CONTROL_ENUM
 	{
-		DTR_DISABLE		= DTR_CONTROL_DISABLE,	// DTR out =0ff if COM-port is opened. State can be changed by function EscapeCommFunction()
-		DTR_ENABLE		= DTR_CONTROL_ENABLE,	// DTR out =0n if COM-port is opened. State can be changed by function EscapeCommFunction()	
-		DTR_HANDSHAKE = DTR_CONTROL_HANDSHAKE	// DTR out = 0n / Off automatically if COM - port is opened / closed
+		DTR_DISABLE		= DTR_CONTROL_DISABLE,		// DTR out =0ff if COM-port is opened. State can be changed by function EscapeCommFunction()
+		DTR_ENABLE		= DTR_CONTROL_ENABLE,			// DTR out =0n if COM-port is opened. State can be changed by function EscapeCommFunction()	
+		DTR_HANDSHAKE = DTR_CONTROL_HANDSHAKE,	// DTR out = 0n / Off automatically if COM - port is opened / closed
+		DTR_NOT_CFG		= COM_NOT_CFG_VALUE,
 	}comDTRControl_t;
 
 	/*********************************************************
@@ -94,10 +102,11 @@ public:
 	**********************************************************/
 	typedef enum RTS_CONTROL_ENUM
 	{
-		RTS_DISABLE = RTS_CONTROL_DISABLE,
-		RTS_ENABLE = RTS_CONTROL_ENABLE,
+		RTS_DISABLE		= RTS_CONTROL_DISABLE,
+		RTS_ENABLE		= RTS_CONTROL_ENABLE,
 		RTS_HANDSHAKE = RTS_CONTROL_HANDSHAKE,
-		RTS_TOGGLE = RTS_CONTROL_TOGGLE
+		RTS_TOGGLE		= RTS_CONTROL_TOGGLE,
+		RTS_NOT_CFG		= COM_NOT_CFG_VALUE,
 	}comRTSControl_t;
 
 	/*********************************************************
@@ -207,25 +216,61 @@ public:
 	****************************************************************/
 	comEvtMsk_t setParam(comParamInit_t param, uint32_t val = 0);
 
-	typedef struct COM_PARAM_STRUCT
+
+	//typedef struct COM_PARAM_STRUCT
+	//{
+	//	comBaud_t baud;
+	//	char  parityChar = -1;				// != -1 - replace on char if parity error & parity != NO
+	//	char  evtChar = -1;						// != -1 - genegate event if byte was received
+	//	uint16_t number : 7;
+	//	uint16_t byteSize : 4;
+	//	uint16_t fOutxDsrFlow : 1;	// =1 - transmit only if DSR input = On. Use bool val us second param for on/off
+	//	uint16_t fOutxCtsFlow : 1;	// =1 - transmit if CTS input(on PC) (receiver ready) = on.
+	//	uint16_t fDsrSensitivity : 1;	// =1 - receive only if DSR input = On. Use bool val us second param for on/off
+	//	uint16_t fNull : 1;	// =1 - in Rx stream '\0' will be ignored
+	//	uint16_t fdefParamIsSet : 1;	// =1 - requared parameters are set
+	//	comDTRControl_t controlDTR : 2;		// control DTR out
+	//	comRTSControl_t controlRTS : 2;		// control RTS out
+	//	comStopBit_t stopBits : 4;
+	//	// if != NO - fParity will be to On state
+	//	comParity_t parity : 3;
+	//}comCfg_t;
+
+	class comCfg_t
 	{
-		unsigned char number = 0;
-		comBaud_t baud:4;
-		unsigned char byteSize:4;
-		comStopBit_t stopBits	:4;
-		// if != -1 - fErrorChar will be to On state
-		char  parityChar = -1;				// != -1 - replace on char if parity error & parity != NO
-		char  evtChar = -1;						// != -1 - genegate event if byte was received
+	public:
+		comBaud_t baud = B_NOT_CFG;
+		uint32_t fdefParamIsSet		: 1;	// =1 - requared parameters are set
+		uint32_t number						: 7;
+		uint32_t byteSize					: 4;
+		uint32_t fOutxDsrFlow			: 2;	// =1 - transmit only if DSR input = On. Use bool val us second param for on/off
+		uint32_t fOutxCtsFlow			: 2;	// =1 - transmit if CTS input(on PC) (receiver ready) = on.
+		uint32_t fDsrSensitivity	: 2;	// =1 - receive only if DSR input = On. Use bool val us second param for on/off
+		uint32_t fNull						: 2;	// =1 - in Rx stream '\0' will be ignored
+		comDTRControl_t controlDTR: 2;		// control DTR out
+		comRTSControl_t controlRTS: 3;		// control RTS out
+		comStopBit_t stopBits			: 2;
 		// if != NO - fParity will be to On state
-		comParity_t parity : 3;
-		comDTRControl_t controlDTR:2;		// control DTR out
-		comRTSControl_t controlRTS:2;		// control RTS out
-		uint8_t fOutxDsrFlow		: 1;	// =1 - transmit only if DSR input = On. Use bool val us second param for on/off
-		uint8_t fOutxCtsFlow		: 1;	// =1 - transmit if CTS input(on PC) (receiver ready) = on.
-		uint8_t fDsrSensitivity	: 1;	// =1 - receive only if DSR input = On. Use bool val us second param for on/off
-		uint8_t fNull						: 1;	// =1 - in Rx stream '\0' will be ignored
-		uint8_t fdefParamIsSet	: 1;	// =1 - requared parameters are set
-	}comCfg_t;
+		comParity_t parity				: 3;
+		char  parityChar = COM_NOT_CFG_VALUE;		// != -1 - replace on char if parity error & parity != NO
+		char  evtChar = COM_NOT_CFG_VALUE;			// != -1 - genegate event if byte was received
+
+		comCfg_t() 
+		{
+			number = COM_NOT_CFG_VALUE;
+			byteSize = COM_NOT_CFG_VALUE;
+			parity = P_NOT_CFG;
+			stopBits = SBIT_NOT_CFG;
+			fOutxDsrFlow = COM_NOT_CFG_VALUE;	// =1 - transmit only if DSR input = On. Use bool val us second param for on/off
+			fOutxCtsFlow = COM_NOT_CFG_VALUE;	// =1 - transmit if CTS input(on PC) (receiver ready) = on.
+			fDsrSensitivity = COM_NOT_CFG_VALUE;	// =1 - receive only if DSR input = On. Use bool val us second param for on/off
+			fNull = COM_NOT_CFG_VALUE;	// =1 - in Rx stream '\0' will be ignored
+			fdefParamIsSet = false;	// =1 - requared parameters are set
+			controlDTR = DTR_NOT_CFG;		// control DTR out
+			controlRTS = RTS_NOT_CFG;		// control RTS out
+		}
+
+	};
 
 
 	/**
@@ -297,7 +342,7 @@ public:
 protected:
 	Buffer m_rxBuf;			// buffer for Rx
 	Buffer m_txBuf;			// buffer for Rx
-	comCfg_t m_comCfg = {0};
+	comCfg_t m_comCfg;
 	/****************************************************************
 	 * @brief Create ComPortWin32 object.
 	 * Link com port object with external Rx & Tx Buffers
@@ -361,7 +406,7 @@ private:
 	// Number of port after last connection
 	int m_comNumber = 0;
 	// Baud of port after last connection
-	comBaud_t m_comBaud = B_NO;
+	comBaud_t m_comBaud = B_NOT_CFG;
 	HANDLE m_hPort = INVALID_HANDLE_VALUE;	// for CreateFile()
 	OVERLAPPED m_rxOverlap = { 0 };
 
