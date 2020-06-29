@@ -36,7 +36,7 @@ bool convStrToInt(const char* str, int& res)
 
 int main(int argc, char* argv[])
 {
-	ComPort::comEvtMsk_t events;
+	comEvtMsk_t events;
 
 	TimeBase sysClk(EVT_1S | EVT_10MS);
 	EventSystem evt;
@@ -60,7 +60,7 @@ int main(int argc, char* argv[])
 				if (!baud) {
 					baud = com.B_4800;
 				}
-				events = com.open(comNum, (ComPort::comBaud_t)baud);
+				events = com.open(comNum, (comBaud_t)baud);
 			}
 		}
 		// or search port and connect with default baud
@@ -68,7 +68,7 @@ int main(int argc, char* argv[])
 			comNum = 1;
 			baud = com.B_4800;
 			for (; events && comNum < 20; ++comNum) {
-				events = com.open(comNum, (ComPort::comBaud_t)baud);
+				events = com.open(comNum, (comBaud_t)baud);
 				if (!events)
 					break;
 			}
@@ -76,24 +76,19 @@ int main(int argc, char* argv[])
 		if (events)
 			std::cout << "Com not connected";
 		else
-			std::cout << "Com" << comNum << " found and connected on " << baud;
+			std::cout << "Com" << comNum << " found and connected on " << baud << "\n";
 	}
 
-	static ComPort::comCfg_t cfg;
-	int k = sizeof(cfg);
-
-
-	
-	cfg.number = 1;
-	cfg.baud = com.B_4800;
+	comCfg_t cfg;
 	cfg.byteSize = 8;
-//	cfg.parity = com.NO;
-	com.setParam(cfg);
+	cfg.parity = com.P_NO;
+	cfg.stopBits = com.SBIT_ONE;
+	cfg.evtChar = '\n';
+	events = com.setParam(cfg);
 
-
-	events = com.EVT_ERR_CRITICAL;
-	events = com.setParam(com.USE_USER_CHAR_EVENT, '$');
-	events = com.setParam(com.USE_EOF_CHAR_EVENT, '\n');
+	//events = com.EVT_ERR_CRITICAL;
+	//events = com.setParam(com.USE_USER_CHAR_EVENT, '$');
+	//events = com.setParam(com.USE_EOF_CHAR_EVENT, '\n');
 	if (events) {
 		evt.handleEvent(com, events);
 	}

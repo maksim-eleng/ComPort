@@ -16,12 +16,13 @@ public:
 	void loop()
 	{
 		static uint64_t tBegin = 0;
-		LARGE_INTEGER Integer;
-		QueryPerformanceCounter(&Integer);
 		if((__rdtsc() - tBegin) >= m_ticksPerSysClk) {
 			tBegin = __rdtsc();
 			handleEvent();
 		}
+		//static uint64_t tBegin = 0;
+		//LARGE_INTEGER Integer;
+		//QueryPerformanceCounter(&Integer);
 		//if ((Integer.QuadPart - tBegin) >= m_ticksPerSysClk) {
 		//	tBegin = Integer.QuadPart;
 		//	handleEvent();

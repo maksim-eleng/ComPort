@@ -46,8 +46,8 @@ public:
 
 	/**************************************************************
 	* @brief Get C_style str from rx buffer
-	* @param str 				<char* str> - Pointer to dst external buffer
-	* @param size				<int size> - size of dst buffer
+	* @param str 				<char*>	- Pointer to dst external buffer
+	* @param size				<int>		- size of dst buffer
 	* @param ensSymbol	<ensSymbol> - end symbol of str like '\n' or '\0'
 	* @return	true - ok
 	*			false - end symbol not found befor end of rx buffer
@@ -66,12 +66,14 @@ public:
 	***********************************************/
 	void removeObserver(IObsComPort& obs);
 
-	/**
-	 * @brief 
-	 * @param cstr 
-	 * @param endSymbol 
-	 * @return 
-	*/
+	/************************************************
+	 * @brief Print to port c_style string
+	 * @param cstr	<const char*> - c_style string
+	 * @param endSymbol <char> - end symbol of string. End symbol'\0' not transmitting
+	 * @return	true - OK
+	 *					false - not ok. Inthis case EVT_ERR_CRITICAL, EVT_ERR_TX events may be 
+										transmit to observers
+	***********************************************/
 	bool print(const char* cstr, char endSymbol = '\0');
 
 
@@ -92,28 +94,24 @@ private:
 
 	/**********************************************
 	 * @brief	*** Event handler for TimeBase class observer's
-	 * Periodically call loop() when ComPort is observer to TimeBase.
+	 * Periodically check core's events of port, notify of observer if 
+	 * core return event
 	 * @param Not used
 	***********************************************/
-	virtual void handleEvent(TimeBase&, TimeBase::evtMask_t) override
-	{
-		comEvtMsk_t events;
-		events = checkWin32ComEvents();
-		if (events)
-		{
-			notifyObservers(events);
-		}
-		
+	virtual void handleEvent(TimeBase&, TimeBase::evtMask_t) override;
 
-	}
+
 
 };
 
+/*********************************************************************
+**********************************************************************
+*********************************************************************/
 
 
 /*********************************************************************
  * @brief Interface class for events organization for observers
- * ComPort objects (this observable class) must add observer throught
+ * The Port objects (this observable class) must add observer throught
  * addObserver() function. Observers must inherit IObsComPort class
  * as public and must redefine handleEvent(ComPort&) function as
  * virtual void handleEvent( ComPort& ref) override.
@@ -132,8 +130,6 @@ public:
 
 
 // typedef for another parth of program
-//using comParamInit_t	= ComPort::comParamInit_t;
-//using comBaud_t				= ComPort::baud_t;
-//using comParity_t			= ComPort::parity_t;
-//using comStopBit_t		= ComPort::stopBit_t;
-//using comEvtMsk_t		= ComPort::evtMsk_t;
+using comBaud_t				= ComPort::comBaud_t;
+using comEvtMsk_t			= ComPort::comEvtMsk_t;
+using comCfg_t				= ComPort::comCfg_t;

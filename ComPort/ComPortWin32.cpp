@@ -3,444 +3,155 @@
 #ifdef _WIN32
 #include <assert.h>
 
-
 /***********************************************************/
-ComPortWin32::comEvtMsk_t ComPortWin32::setParam(comParamInit_t param, uint32_t val)
+ComPortWin32::comEvtSetMsk_t operator|(ComPortWin32::comEvtSetMsk_t l, ComPortWin32::comEvtSetMsk_t r)
 {
-  DCB dcb;
-  bool fPortReady;
-  comEvtMsk_t events = EVT_NO;
-  
-  fPortReady = GetCommState(m_hPort, &dcb);
-  if (!fPortReady && ERROR_SUCCESS != GetLastError()) {
-    setEvent(events, EVT_ERR_CRITICAL);
-    param = NO_PARAM;
-  }
-  
-  // forming parameter's variable
-  switch (param)
-  {
-    case BAUD: {
-      assert(val);
-      dcb.BaudRate = (DWORD)val;
-    }
-    break;
-
-    case BYTE_SIZE: {
-      assert(val >= 5 && val <= 8);
-      dcb.ByteSize = (BYTE)val;
-    }
-    break;
-
-    case STOP_BITS: {
-      comStopBit_t tmp = static_cast<comStopBit_t>(val);
-      assert(tmp == SBIT_ONE || tmp == SBIT_ONE5 || tmp == SBIT_TWO);
-      dcb.StopBits = (BYTE)val;
-    }
-    break;
-
-    case PARITY_TYPE: {
-      comParity_t tmp = static_cast<comParity_t>(val);
-      assert(tmp == P_NO || tmp == P_ODD || tmp == P_EVEN || tmp == P_MARK || tmp == P_SPACE);
-      dcb.Parity = val;
-    }
-    break;
-
-    case PARITY_CHECK: {
-      dcb.fParity = (bool)val;
-    }
-    break;
-
-    case PARITY_USE_ERR_CHAR: {
-      dcb.fErrorChar = true;
-      dcb.ErrorChar = val;
-    }
-    break;
-
-    case PARITY_NOT_USE_ERR_CHAR: {
-      dcb.fErrorChar = false;
-    }
-    break;
-
-    case USE_DTR_OUT: {
-      comDTRControl_t tmp = static_cast<comDTRControl_t>(val);
-      assert(tmp == DTR_DISABLE || tmp == DTR_ENABLE || tmp == DTR_HANDSHAKE);
-      dcb.fDtrControl = val;
-    }
-    break;
-
-    case USE_DSR_FLOW: {
-      dcb.fOutxDsrFlow = (bool)val;
-    }
-    break;
-
-    case USE_DSR_SENS: {
-      dcb.fDsrSensitivity = (bool)val;
-    }
-    break;
-
-    case USE_RTS_OUT: {
-      comRTSControl_t tmp = static_cast<comRTSControl_t>(val);
-      assert(tmp == RTS_DISABLE || tmp == RTS_ENABLE || tmp == RTS_HANDSHAKE || tmp == RTS_TOGGLE);
-      dcb.fRtsControl = val;
-    }
-    break;
-
-    case USE_CTS_FLOW: {
-      dcb.fOutxCtsFlow = val;
-    }
-    break;
-
-    case USE_NULL_IGNORE: {
-      dcb.fNull = val;
-    }
-    break;
-    
-    case USE_USER_CHAR_EVENT:
-      m_userChar = (char)val;
-    break;
-
-    case USE_EOF_CHAR_EVENT: 
-    {
-      DWORD evtMask(0);
-      fPortReady = GetCommMask(m_hPort, &evtMask);
-      if ( fPortReady ) {
-        fPortReady = SetCommMask(m_hPort, evtMask | EVTSET_RX_EOFCHAR);
-      }
-      if ( fPortReady ) {
-        dcb.EvtChar = (char)val;
-        m_eofChar = (char)val;
-      }
-      else if (ERROR_SUCCESS != GetLastError()){
-        setEvent(events, EVT_ERR_CRITICAL);
-      }
-    }
-    break;
-
-    case EV_SET: {
-      DWORD evtMask(0);
-      fPortReady = GetCommMask(m_hPort, &evtMask);
-      assert(!(evtMask & USE_EOF_CHAR_EVENT)); // in this case must use USE_EOF_CHAR_EVENT command
-      if ( fPortReady ) {
-        fPortReady = SetCommMask(m_hPort, evtMask | (val));
-      }
-      if ((!fPortReady) && ERROR_SUCCESS != GetLastError()) {
-        setEvent(events, EVT_ERR_CRITICAL);
-      }
-    }
-    break;
-
-    default:;
-  }//switch
-
-  // DCB struct init
-  if ( fPortReady && (!checkEvent(events, EVT_ERR_CRITICAL)) ) { 
-    fPortReady = SetCommState(m_hPort, &dcb);
-    if ((!fPortReady) && ERROR_SUCCESS != GetLastError()) {
-      setEvent(events, EVT_ERR_CRITICAL);
-      param = NO_PARAM;
-    }
-  }
-
-  /*** For timeouts ****/
-  if (param == T_READ_INTERVAL || param == T_READ_TOTAL_MULTIPLIER ||
-      param == T_READ_TOTAL_CONSTANT || param == T_WRITE_TOTAL_MULTIPLIER ||
-      param == T_WRITE_TOTAL_CONSTANT ) {
-    COMMTIMEOUTS CommTimeOuts;
-    fPortReady = GetCommTimeouts(m_hPort, &CommTimeOuts);
-    if ( fPortReady ) {
-      switch ( param ) { 
-        case T_READ_INTERVAL:
-          CommTimeOuts.ReadIntervalTimeout = val;
-        break;
-        case T_READ_TOTAL_MULTIPLIER:
-          CommTimeOuts.ReadTotalTimeoutMultiplier = val;
-        break;
-        case T_READ_TOTAL_CONSTANT:
-          CommTimeOuts.ReadTotalTimeoutConstant = val;
-        break;
-        case T_WRITE_TOTAL_MULTIPLIER:
-          CommTimeOuts.WriteTotalTimeoutMultiplier = val;
-        break;
-        case T_WRITE_TOTAL_CONSTANT:
-          CommTimeOuts.WriteTotalTimeoutConstant = val;
-        break;
-      } //switch
-      fPortReady = SetCommTimeouts(m_hPort, &CommTimeOuts);
-    } //if
-    if ((!fPortReady) && ERROR_SUCCESS != GetLastError()) {
-      setEvent(events, EVT_ERR_CRITICAL);
-    }
-  }//if
-
-  // close handle if any eeror and return event mask
-  if( checkEvent(events, EVT_ERR_CRITICAL) ) {
-    close();
-  }
-
-  return events;
+  return (ComPortWin32::comEvtSetMsk_t)(l | (unsigned int)r);
 }
 
 /***********************************************************/
-ComPortWin32::comEvtMsk_t ComPortWin32::setParam(comCfg_t& param)
+void operator|=(ComPortWin32::comEvtSetMsk_t& l, const ComPortWin32::comEvtSetMsk_t& r)
 {
+  l = l | r;
+}
+
+/***********************************************************/
+ComPortWin32::comEvtMsk_t ComPortWin32::setParam(ComPortWin32::comCfg_t& ref)
+{
+  // modified mirror of comCfg_t m_cfg if field in comCfg_t ref was defined
+  comCfg_t set = m_cfg;
+  // Field of dcb modified if necessary.
   DCB dcb;
-  bool fPortReady;
+  DWORD evtMask(0);   // for GetMask()
+  bool fPortReady = true;
   comEvtMsk_t evt = EVT_NO;
 
-  comCfg_t tmpSet;
-
-  m_comCfg = param;
-  
-  // read from sys DCB to m_comCfg
-  if (EVT_NO != getParam(m_comCfg)) {
-    return evt;
-  } 
-  // set default parameters in dcb
-  //if (!m_comCfg.fdefParamIsSet) {
-  //  m_comCfg.fdefParamIsSet = true;
-  //  dcb.fBinary = true;
-  //  dcb.fOutX = false;
-  //  dcb.fInX = false;
-  //  dcb.fAbortOnError = false;
-  //}
-  //forming comSet struct
-  //dcb.BaudRate = param.baud;
-  //dcb.ByteSize = param.byteSize;
-  //dcb.StopBits = param.stopBits;
-  //// if != NO - fParity will be to On state
-  //if (param.parity == NO) {
-  //  dcb.fParity = false;
-  //}
-  //else {
-  //  dcb.fParity = true;
-  //  dcb.Parity = param.parity;
-  //}
-  // if fErrorChar != -1 - fErrorChar will be to On state
-  if (param.parityChar == -1) {
-    dcb.fErrorChar = false;
-  }
-  else {
-    dcb.fErrorChar = true;
-    dcb.fErrorChar = param.parityChar;
-  }
-
-  //dcb.EvtChar = param.evtChar;
-  //dcb.fDtrControl = param.controlDTR;
-  //dcb.fRtsControl = param.controlRTS;
-  //dcb.fOutxDsrFlow = param.fOutxDsrFlow;
-  //dcb.fOutxCtsFlow = param.fOutxCtsFlow;
-  //dcb.fDsrSensitivity = param.fDsrSensitivity;
-  //dcb.fNull = param.fNull;
-  // DCB struct init
-  fPortReady = SetCommState(m_hPort, &dcb);
-  if ((!fPortReady) && ERROR_SUCCESS != GetLastError()) {
+  //read current DCB
+  fPortReady = GetCommState(m_hPort, &dcb);
+  if (!fPortReady && ERROR_SUCCESS != GetLastError()) {
     setEvent(evt, EVT_ERR_CRITICAL);
+    return evt;
+  }
+
+  // permis event for rx any char (default)
+  set.evtSet |= EVTSET_RX_CHAR;
+  // set default parameters in dcb, timeout,...
+  dcb.fBinary = true;   // binary use only
+  dcb.fOutX = false;    // hardware control not used
+  dcb.fInX = false;
+  dcb.fAbortOnError = false;
+
+  // Configure temporarry variabes if input parameter is not default value
+  if (ref.baud != B_NOT_CFG) {
+    set.baud = ref.baud;
+    dcb.BaudRate = ref.baud;
+  }
+  if (ref.number != COM_NOT_CFG_VALUE) {
+    set.number = ref.number;
+  }
+  if (ref.byteSize != COM_NOT_CFG_VALUE) {
+    set.byteSize = ref.byteSize;
+    dcb.ByteSize = ref.byteSize;
+  }
+  if (ref.fOutxDsrFlow != COM_NOT_CFG_VALUE) {
+    set.fOutxDsrFlow = ref.fOutxDsrFlow;
+    dcb.fOutxDsrFlow = ref.fOutxDsrFlow;
+  }
+  if (ref.fOutxCtsFlow != COM_NOT_CFG_VALUE) {
+    set.fOutxCtsFlow = ref.fOutxCtsFlow;
+    dcb.fOutxCtsFlow = ref.fOutxCtsFlow;
+  }
+  if (ref.fDsrSensitivity != COM_NOT_CFG_VALUE) {
+    set.fDsrSensitivity = ref.fDsrSensitivity;
+    dcb.fDsrSensitivity = ref.fDsrSensitivity;
+  }
+  if (ref.fNull != COM_NOT_CFG_VALUE) {
+    set.fNull = ref.fNull;
+    dcb.fNull = ref.fNull;
+  }
+  if (ref.controlDTR != DTR_NOT_CFG) {
+    set.controlDTR = ref.controlDTR;
+    dcb.fDtrControl = ref.controlDTR;
+  }
+  if (ref.controlRTS != RTS_NOT_CFG) {
+    set.controlRTS = ref.controlRTS;
+    dcb.fRtsControl = ref.controlRTS;
+  }
+  if (ref.stopBits != SBIT_NOT_CFG) {
+    set.stopBits = ref.stopBits;
+    dcb.StopBits = ref.stopBits;
+  }
+  if (ref.parity != P_NOT_CFG) {
+    set.parity = ref.parity;
+    dcb.Parity = ref.parity;
+    if (ref.parity != P_NO) {
+      dcb.fParity = true;
+    }
+  }
+  if (ref.parityChar != COM_NOT_CFG_VALUE) {
+    set.parityChar = ref.parityChar;
+    dcb.fErrorChar = true;
+  }
+  if (ref.evtChar != COM_NOT_CFG_VALUE) {
+    set.evtChar = ref.evtChar;
+    set.evtSet |= EVTSET_RX_USER_CHAR;
+    dcb.EvtChar = ref.evtChar;
+  }
+  if (ref.evtSet != EVTSET_NOT_SET) {
+    if (fPortReady) {
+      fPortReady = GetCommMask(m_hPort, &evtMask);
+      if (fPortReady) {
+        set.evtSet |= (ref.evtSet | (comEvtSetMsk_t)evtMask);
+      }
+    }
+  }
+
+  // analize of current settings
+  // 1. Minimal parameters of port must be set
+  // 2. byteSize = 4...8
+  // 3. if parity char was set - parity type must be set too
+  if ((set.baud   == B_NOT_CFG) || 
+    set.number    == COM_NOT_CFG_VALUE ||
+    set.stopBits  == SBIT_NOT_CFG ||
+    set.parity    == P_NOT_CFG ||
+    set.evtSet    == EVTSET_NOT_SET ||
+    ( set.byteSize < 4 || set.byteSize > 8) ||
+    (set.parityChar != COM_NOT_CFG_VALUE && (set.parity == P_NOT_CFG || set.parity == P_NO)) )  {
+    setEvent(evt, EVT_ERR_INVALID_PARAM);
   }
 
 
-  //// forming parameter's variable
-  //switch (param)
-  //{
-  //case BAUD: {
-  //  assert(val);
-  //  dcb.BaudRate = (DWORD)val;
-  //}
-  //         break;
+  // DCB struct init if not port errors
+  // if parameters are set correctly
+  if (fPortReady && evt == EVT_NO) {
+    fPortReady = SetCommState(m_hPort, &dcb);
+    if (!fPortReady) {
+      if (ERROR_INVALID_PARAMETER ==  GetLastError())
+        setEvent(evt, EVT_ERR_INVALID_PARAM);
+      else
+        setEvent(evt, EVT_ERR_CRITICAL);
+    }
+  }
 
-  //case BYTE_SIZE: {
-  //  assert(val >= 5 && val <= 8);
-  //  dcb.ByteSize = (BYTE)val;
-  //}
-  //              break;
+  // set WIN32 events
+  if (fPortReady && evt == EVT_NO) {
+    fPortReady = SetCommMask(m_hPort, set.evtSet);
+    if (!fPortReady) {
+      if (ERROR_INVALID_PARAMETER == GetLastError())
+        setEvent(evt, EVT_ERR_INVALID_PARAM);
+      else
+        setEvent(evt, EVT_ERR_CRITICAL);
+    }
+  }
 
-  //case STOP_BITS: {
-  //  comStopBit_t tmp = static_cast<comStopBit_t>(val);
-  //  assert(tmp == ONE_BIT || tmp == ONE5_BIT || tmp == TWO_BIT);
-  //  dcb.StopBits = (BYTE)val;
-  //}
-  //              break;
+  // store temporarry mirror
+  if (fPortReady && evt == EVT_NO) {
+    m_cfg = set;
+  }
 
-  //case PARITY_TYPE: {
-  //  comParity_t tmp = static_cast<comParity_t>(val);
-  //  assert(tmp == NO || tmp == ODD || tmp == EVEN || tmp == MARK || tmp == SPACE);
-  //  dcb.Parity = val;
-  //}
-  //                break;
-
-  //case PARITY_CHECK: {
-  //  dcb.fParity = (bool)val;
-  //}
-  //                 break;
-
-  //case PARITY_USE_ERR_CHAR: {
-  //  dcb.fErrorChar = true;
-  //  dcb.ErrorChar = val;
-  //}
-  //                        break;
-
-  //case PARITY_NOT_USE_ERR_CHAR: {
-  //  dcb.fErrorChar = false;
-  //}
-  //                            break;
-
-  //case USE_DTR_OUT: {
-  //  comDTRControl_t tmp = static_cast<comDTRControl_t>(val);
-  //  assert(tmp == DTR_DISABLE || tmp == DTR_ENABLE || tmp == DTR_HANDSHAKE);
-  //  dcb.fDtrControl = val;
-  //}
-  //                break;
-
-  //case USE_DSR_FLOW: {
-  //  dcb.fOutxDsrFlow = (bool)val;
-  //}
-  //                 break;
-
-  //case USE_DSR_SENS: {
-  //  dcb.fDsrSensitivity = (bool)val;
-  //}
-  //                 break;
-
-  //case USE_RTS_OUT: {
-  //  comRTSControl_t tmp = static_cast<comRTSControl_t>(val);
-  //  assert(tmp == RTS_DISABLE || tmp == RTS_ENABLE || tmp == RTS_HANDSHAKE || tmp == RTS_TOGGLE);
-  //  dcb.fRtsControl = val;
-  //}
-  //                break;
-
-  //case USE_CTS_FLOW: {
-  //  dcb.fOutxCtsFlow = val;
-  //}
-  //                 break;
-
-  //case USE_NULL_IGNORE: {
-  //  dcb.fNull = val;
-  //}
-  //                    break;
-
-  //case USE_USER_CHAR_EVENT:
-  //  m_userChar = (char)val;
-  //  break;
-
-  //case USE_EOF_CHAR_EVENT:
-  //{
-  //  DWORD evtMask(0);
-  //  fPortReady = GetCommMask(m_hPort, &evtMask);
-  //  if (fPortReady) {
-  //    fPortReady = SetCommMask(m_hPort, evtMask | EVTSET_RX_EOFCHAR);
-  //  }
-  //  if (fPortReady) {
-  //    dcb.EvtChar = (char)val;
-  //    m_eofChar = (char)val;
-  //  }
-  //  else if (ERROR_SUCCESS != GetLastError()) {
-  //    setEvent(events, EVT_ERR_CRITICAL);
-  //  }
-  //}
-  //break;
-
-  //case EV_SET: {
-  //  DWORD evtMask(0);
-  //  fPortReady = GetCommMask(m_hPort, &evtMask);
-  //  assert(!(evtMask & USE_EOF_CHAR_EVENT)); // in this case must use USE_EOF_CHAR_EVENT command
-  //  if (fPortReady) {
-  //    fPortReady = SetCommMask(m_hPort, evtMask | (val));
-  //  }
-  //  if ((!fPortReady) && ERROR_SUCCESS != GetLastError()) {
-  //    setEvent(events, EVT_ERR_CRITICAL);
-  //  }
-  //}
-  //           break;
-
-  //default:;
-  //}//switch
-
-  //// DCB struct init
-  //if (fPortReady && (!checkEvent(events, EVT_ERR_CRITICAL))) {
-  //  fPortReady = SetCommState(m_hPort, &dcb);
-  //  if ((!fPortReady) && ERROR_SUCCESS != GetLastError()) {
-  //    setEvent(events, EVT_ERR_CRITICAL);
-  //    param = NO_PARAM;
-  //  }
-  //}
-
-  ///*** For timeouts ****/
-  //if (param == T_READ_INTERVAL || param == T_READ_TOTAL_MULTIPLIER ||
-  //  param == T_READ_TOTAL_CONSTANT || param == T_WRITE_TOTAL_MULTIPLIER ||
-  //  param == T_WRITE_TOTAL_CONSTANT) {
-  //  COMMTIMEOUTS CommTimeOuts;
-  //  fPortReady = GetCommTimeouts(m_hPort, &CommTimeOuts);
-  //  if (fPortReady) {
-  //    switch (param) {
-  //    case T_READ_INTERVAL:
-  //      CommTimeOuts.ReadIntervalTimeout = val;
-  //      break;
-  //    case T_READ_TOTAL_MULTIPLIER:
-  //      CommTimeOuts.ReadTotalTimeoutMultiplier = val;
-  //      break;
-  //    case T_READ_TOTAL_CONSTANT:
-  //      CommTimeOuts.ReadTotalTimeoutConstant = val;
-  //      break;
-  //    case T_WRITE_TOTAL_MULTIPLIER:
-  //      CommTimeOuts.WriteTotalTimeoutMultiplier = val;
-  //      break;
-  //    case T_WRITE_TOTAL_CONSTANT:
-  //      CommTimeOuts.WriteTotalTimeoutConstant = val;
-  //      break;
-  //    } //switch
-  //    fPortReady = SetCommTimeouts(m_hPort, &CommTimeOuts);
-  //  } //if
-  //  if ((!fPortReady) && ERROR_SUCCESS != GetLastError()) {
-  //    setEvent(events, EVT_ERR_CRITICAL);
-  //  }
-  //}//if
-
-  //// close handle if any eeror and return event mask
-  //if (checkEvent(events, EVT_ERR_CRITICAL)) {
-  //  close();
-  //}
-
-  //return events;
+  return evt;
 }
 
-/***********************************************************/
-ComPortWin32::comEvtMsk_t ComPortWin32::getParam(comCfg_t& param)
-{
-  DCB dcb = {0};
-  bool fPortReady;
-  comEvtMsk_t events = EVT_NO;
-
-  //// read system settings
-  //fPortReady = GetCommState(m_hPort, &dcb);
-  //if (fPortReady || ERROR_SUCCESS == GetLastError()) {
-  //  //forming comSet struct
-  //  param.baud = (comBaud_t)dcb.BaudRate;
-  //  param.byteSize = dcb.ByteSize;
-  //  param.stopBits = (comStopBit_t)dcb.StopBits;
-  //  // if fParity not set - parity not use
-  //  if (!dcb.fParity)
-  //    param.parity = NO;
-  //  else
-  //    param.parity = (comParity_t)dcb.Parity;
-  //  // if fParity not set - parity not use
-  //  if (!dcb.fErrorChar)
-  //    param.parityChar = -1;
-  //  else
-  //    param.parityChar = dcb.ErrorChar;
-  //  param.evtChar = dcb.EvtChar;
-  //  param.controlDTR = (comDTRControl_t)dcb.fDtrControl;
-  //  param.controlRTS = (comRTSControl_t)dcb.fRtsControl;
-  //  param.fOutxDsrFlow = dcb.fOutxDsrFlow;
-  //  param.fOutxCtsFlow = dcb.fOutxCtsFlow;
-  //  param.fDsrSensitivity = dcb.fDsrSensitivity;
-  //  param.fNull = dcb.fNull;
-  //}
-  //else {
-  //  setEvent(events, EVT_ERR_CRITICAL);
-  //}
-
-  return events;
-}
 
 /***********************************************************/
 bool ComPortWin32::checkEvent(comEvtMsk_t& events, comEvtMsk_t mask) const
@@ -482,21 +193,9 @@ ComPortWin32::comEvtMsk_t ComPortWin32::open( int comNum, comBaud_t baud )
   );
   if( INVALID_HANDLE_VALUE == m_hPort ) {
     setEvent(events, EVT_ERR_CRITICAL);
-    close();
     return events;
   }
 
-  // config baud, and 8N1 as default
-  DCB dcb;
-  fPortReady = GetCommState( m_hPort, &dcb );
-  if( fPortReady ) {
-    dcb.BaudRate = baud;
-    dcb.ByteSize = 8;
-    dcb.Parity = P_NO;
-    dcb.StopBits = SBIT_ONE;
-    fPortReady = SetCommState( m_hPort, &dcb );
-  }
-  
   // Set recomendation buffer's size (rx/tx)
   if( fPortReady ) {
     fPortReady = SetupComm( m_hPort, (m_rxBuf.getBufSize() * 2), (m_txBuf.getBufSize() * 2) );
@@ -513,14 +212,6 @@ ComPortWin32::comEvtMsk_t ComPortWin32::open( int comNum, comBaud_t baud )
     fPortReady = SetCommTimeouts( m_hPort, &t );
   }
 
-  // Create event. Event type - in SetCommMask()
-  // EV_RX_CHAR - us default for receive
-  if( fPortReady ) {
-    events = setParam( EV_SET, EVTSET_RX_CHAR);
-    if(events)
-      fPortReady = false;
-  }
-
   if( fPortReady ) {
     m_rxOverlap.hEvent = CreateEvent( NULL,    // атрибуты безопасности по умолчанию 
       true,     // manual события 
@@ -534,8 +225,8 @@ ComPortWin32::comEvtMsk_t ComPortWin32::open( int comNum, comBaud_t baud )
 
   // forming result of operation 
   if (fPortReady) {
-    m_comNumber = comNum;
-    m_comBaud = baud;
+    m_cfg.number = comNum;
+    m_cfg.baud = baud;
   }
   else {
     close();
@@ -563,22 +254,38 @@ void ComPortWin32::close()
   if (m_hPort != INVALID_HANDLE_VALUE) {
     CloseHandle(m_hPort);
     m_hPort = INVALID_HANDLE_VALUE;
+    m_rxBuf.resetIndex();
+    m_txBuf.resetIndex();
+    evtCharCnt = 0;
+    m_rxOverlap = { 0 };
   }
-  m_rxBuf.resetIndex();
-  m_txBuf.resetIndex();
-  m_rxOverlap = { 0 };
 }
 
 /***********************************************************/
 ComPortWin32::comEvtMsk_t ComPortWin32::reopen()
 {
-  comEvtMsk_t evt = EVT_NO;
-  evt = open(m_comNumber, m_comBaud);
-  //if (evt == EVT_NO)
-  //  setParam(USE_USER_CHAR_EVENT, '$');
-  //if (evt == EVT_NO)
-  //  setParam(USE_EOF_CHAR_EVENT, '\n');
+  comEvtMsk_t evt; 
+  evt = open(m_cfg.number, m_cfg.baud);
+  if (EVT_NO == evt) {
+    setParam(m_cfg);
+  }
   return evt;
+}
+
+/***********************************************************/
+bool ComPortWin32::isPortOpened()
+{
+  return m_hPort != INVALID_HANDLE_VALUE;
+}
+
+int ComPortWin32::userCharGetReceivedCounter()
+{
+  return evtCharCnt;
+}
+
+void ComPortWin32::userCharHandled()
+{
+  --evtCharCnt;
 }
 
 /***********************************************************/
@@ -594,17 +301,23 @@ ComPortWin32::~ComPortWin32()
 }
 
 /***********************************************************/
-ComPortWin32::comEvtMsk_t ComPortWin32::checkWin32ComEvents()
+ComPortWin32::comEvtMsk_t ComPortWin32::checkCoreEvents()
 {
   static DWORD dwEvtMask = 0;
-  comEvtMsk_t events = EVT_NO;
-  DWORD dwRet;
-  bool fReady = 0;    // =1 - ready for read data
-  char buf[50];       // for ReadFile
   static enum {
     waitEvt,
     pending,
   }state = waitEvt;
+
+  if (!isPortOpened()) {
+    state = waitEvt;
+    DWORD dwEvtMask = 0;
+    return EVT_ERR_CRITICAL;
+  }
+  comEvtMsk_t events = EVT_NO;
+  DWORD dwRet;
+  bool fReady = 0;    // =1 - ready for read data
+  char buf[50];       // for ReadFile
 
   // this section need in order for the WaitCommEvent and GetOverlappedResult 
   // to be performed at different times
@@ -672,19 +385,17 @@ ComPortWin32::comEvtMsk_t ComPortWin32::checkWin32ComEvents()
             break;
           }
           // if Event char was detected in input stream
-          if (buf[i] == m_userChar && m_userChar != EVT_CHAR_FICTIVE_VALUE)
+          if (buf[i] == m_cfg.evtChar && m_cfg.evtChar != COM_NOT_CFG_VALUE) {
             setEvent(events, EVT_RX_USER_CHAR);
-          //// if EOF char was detected in input stream
-          //if (buf[i] == m_eofChar && m_eofChar != EVT_CHAR_FICTIVE_VALUE) {
-          //  setEvent(events, EVT_RX_EOF_CHAR);
-          //}
+            ++evtCharCnt;
+          }
         }
       } while (len);//while
     }
   
     // EOF char received
-    if (dwEvtMask & EVTSET_RX_EOFCHAR) {
-      setEvent(events, EVT_RX_EOF_CHAR);
+    if (dwEvtMask & EVTSET_RX_USER_CHAR) {
+      setEvent(events, EVT_RX_USER_CHAR);
     }
     // Receive buffer is 80 percent full
     if (dwEvtMask & EVTSET_RX80FULL) {
@@ -710,19 +421,17 @@ ComPortWin32::comEvtMsk_t ComPortWin32::checkWin32ComEvents()
 /******************************************************/
 ComPortWin32::comEvtMsk_t ComPortWin32::startTx()
 {
-  comEvtMsk_t evt = EVT_NO;
-  if (m_hPort == INVALID_HANDLE_VALUE) {
-    setEvent(evt, EVT_ERR_CRITICAL);
-    return evt;
+  if (!isPortOpened()) {
+    return EVT_ERR_CRITICAL;
   }
   if (m_txBuf.checkIsEpty()) {
-    setEvent(evt, EVT_ERR_TX);
-    return evt;
+    return EVT_ERR_TX;
   }
 
   char buf[50];
   DWORD dwRet;
   DWORD err;
+  comEvtMsk_t evt = EVT_NO;
   DWORD len = 0;
   int lenTotal = 0;
   int cnt = 0;
@@ -757,7 +466,7 @@ ComPortWin32::comEvtMsk_t ComPortWin32::startTx()
         err = GetLastError();
       }
       // len - writen bytes, err=ERROR_IO_PENDING || ERROR_IO_INCOMPLETE - OK
-      if (len && (err == ERROR_IO_PENDING || err == ERROR_IO_INCOMPLETE)) {
+      if (len && (err == ERROR_SUCCESS || err == ERROR_IO_PENDING || err == ERROR_IO_INCOMPLETE)) {
         lenTotal += len;
       }
       // error of last transmit. Break of operation

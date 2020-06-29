@@ -6,7 +6,6 @@
 #include "Buffer.h"
 
 
-
 class ComPortWin32
 {
 public:
@@ -22,30 +21,27 @@ public:
 		EVT_NO,
 		// User char was detected in com-port stream
 		// User char set throught setParam(USE_USER_CHAR_EVENT, '$')
-		EVT_RX_USER_CHAR	= (1 << 1),
-		// End of string char was detected in com-port stream
-		// This char set throught setParam(USE_EOF_CHAR_EVENT, '\n')
-		EVT_RX_EOF_CHAR		= (1 << 2),
+		EVT_RX_USER_CHAR			= (1 << 0),
 		// Win32 rx buffer if full more than 80%
-		EVT_RX80_FULL			= (1 << 3),
+		EVT_RX80_FULL					= (1 << 1),
 		// CTS changed state
-		EVT_CTS_CHANGED		= (1 << 4),
+		EVT_CTS_CHANGED				= (1 << 2),
 		// DSR changed state
-		EVT_DSR_CHANGED		= (1 << 5),
+		EVT_DSR_CHANGED				= (1 << 3),
 		// Line status error occurred
-		EVT_ERR_LINE					= (1 << 6),
+		EVT_ERR_LINE					= (1 << 4),
 		// Error when tx. Last data not transmitted
-		EVT_ERR_TX						= (1 << 7),
+		EVT_ERR_TX						= (1 << 5),
 		// Rx buffer overflow when write operation
-		EVT_ERR_RX_BUF_OVF		= (1 << 8),
+		EVT_ERR_RX_BUF_OVF		= (1 << 6),
+		// Invalid parameter where set port parameters was detected
+		EVT_ERR_INVALID_PARAM	= (1 << 7),
 		// Critical errors as com not ready, not open, not handle,...
-		EVT_ERR_CRITICAL			= (1 << 10),
-		EVT_END								= (1 << 11),
+		EVT_ERR_CRITICAL			= (1 << 8),
 	}comEvtMsk_t;
 
 	/*********************************************************
-	 * @brief For config Com-port's Baud rate.
-	 For description see PARAM_INIT_ENUM
+	 * @brief Baud rate. For config Com-port's 
 	**********************************************************/
 	typedef enum BAUD_ENUM
 	{
@@ -59,8 +55,7 @@ public:
 	}comBaud_t;
 
 	/*********************************************************
-	 * @brief For config Com-port's Parity variante.
-	 For description see PARAM_INIT_ENUM
+	 * @brief Parity variante. For config Com-port's 
 	**********************************************************/
 	typedef enum PARITY_ENUM
 	{
@@ -74,7 +69,6 @@ public:
 
 	/*********************************************************
 	 * @brief Numbers of stop bit. For config Com-port.
-	 For description see PARAM_INIT_ENUM
 	**********************************************************/
 	typedef enum STOP_BIT_ENUM
 	{
@@ -86,7 +80,6 @@ public:
 
 	/*********************************************************
 	 * @brief DTR line control. For config Com-port.
-	 For description see PARAM_INIT_ENUM
 	**********************************************************/
 	typedef enum DTR_CONTROL_ENUM
 	{
@@ -98,7 +91,6 @@ public:
 
 	/*********************************************************
 	 * @brief RTS line control. For config Com-port.
-	 For description see PARAM_INIT_ENUM
 	**********************************************************/
 	typedef enum RTS_CONTROL_ENUM
 	{
@@ -109,19 +101,19 @@ public:
 		RTS_NOT_CFG		= COM_NOT_CFG_VALUE,
 	}comRTSControl_t;
 
-	/*********************************************************
-	* @brief 
-	Event's mask for toggle WIN system's event mask. For config Com-port only 
-	and detect event in checkEventWin32
-	 For description see PARAM_INIT_ENUM
-	**********************************************************/
+	///*********************************************************
+	//* @brief	
+	//Event's mask for toggle WIN system's event mask. For config Com-port only
+	//and detect event in checkEventWin32
+	//**********************************************************/
 	typedef enum EVENT_SET_MASK_ENUM
 	{
+		EVTSET_NOT_SET			= 0,
 		// Generate event if any char was received
 		EVTSET_RX_CHAR			= EV_RXCHAR,
 		// Generate event if evtChar char was received
 		// Event char is set throught second parameter cfgValue (e.g. '\n')
-		EVTSET_RX_EOFCHAR		= EV_RXFLAG,
+		EVTSET_RX_USER_CHAR	= EV_RXFLAG,
 		// Event if win system Rx Buffer is full by 80%
 		EVTSET_RX80FULL			= EV_RX80FULL,
 		EVTSET_CTS_CHANGED	= EV_CTS,		// CTS input changed
@@ -129,163 +121,77 @@ public:
 		EVTSET_LINE_ERR			= EV_ERR,		// Errors frame, overrun ore RxParity was detected
 	}comEvtSetMsk_t;
 
-	/*********************************************************
-	@brief
-	* For Parameters init commands as name of parameter	***
-	* For interface config Win32 DCB struct for COM - port
-	* Instruction about DCB:
-	*http://vsokovikov.narod.ru/New_MSDN_API/Comm_res/str_dcb.htm
-	*https://ru.wikibooks.org/wiki/COM-%D0%BF%D0%BE%D1%80%D1%82_%D0%B2_Windows_%28%D0%BF%D1%80%D0%BE%D0%B3%D1%80%D0%B0%D0%BC%D0%BC%D0%B8%D1%80%D0%BE%D0%B2%D0%B0%D0%BD%D0%B8%D0%B5%29
-	*********************************************************/
-	typedef enum PARAM_INIT_ENUM
-	{
-	NO_PARAM,
-	// Set Baud. Use BAUD_ENUM as second param
-	BAUD,
-	/****		FOR STRUCTURE FRAME		*****/
-		// Size is set throught second parameter (4...8).
-	BYTE_SIZE,
-		// Use STOP_BIT_ENUM as second param:
-		// ONE_BIT, ONE5_BIT, TWO_BIT
-	STOP_BITS,
-	/***	 parity check		************/
-		// Paruty type. Use PARITY_ENUM as second param
-		// NO, ODD, EVEN, MARK, SPACE
-	PARITY_TYPE,
-		// use/or not check parity control for input data 
-		// Use bool val us second param for on/off
-	PARITY_CHECK,
-		// replace received byte to char, if parity err (set by PARITY_ERR_CHAR)
-		// Error char must be set as second parameter
-	PARITY_USE_ERR_CHAR,
-		// switch off replace received byte to char, if parity err (set by PARITY_ERR_CHAR)
-		// second param may not be used
-	PARITY_NOT_USE_ERR_CHAR,
-	/***	Connection for flow control		**********/
-	//4(DTR - Data terminal ready)--->-- - 6 (DSR - Data set ready)
-	//7(RTS - Request to Send)--->-- - 8 (CTS - Clear to Send - готовность приема)
-	//8 (CTS - Clear to Send - -- - < -- - 7 (RTS - Request to Send)
-		// Libe DTR---->----DSR
-	USE_DTR_OUT,		// DTR control. Use DTR_CONTROL_ENUM as second param
-	USE_DSR_FLOW,		// transmit only if DSR input = On. Use bool val us second param for on/off
-	USE_DSR_SENS,		// receive only if DSR input = On. Use bool val us second param for on/off
-		// Libe RTS---->----CTS
-	USE_RTS_OUT,		// RTS out control. Use RTS_CONTROL_ENUM as second param
-	USE_CTS_FLOW,		// transmit if CTS input(on PC) (receiver ready) = on. Use bool val as second param for on/off
-	//	/*****  FOR OTHER ERRORS	*******/
-		// ignor NULL symbol if received
-		// Use bool val us second param for on/off
-	USE_NULL_IGNORE,	
-	
-	//*********** Event part	**********/
-		// Use user char event. Generate event EVT_RX_USER_CHAR
-		// if char was detected in input stream.
-		// Char must be set as second param
-	USE_USER_CHAR_EVENT,
-		// Use end of string char event. Generate event EVT_RX_EOF_CHAR
-		// if char was detected in input stream.
-		// Char must be set as second param
-	USE_EOF_CHAR_EVENT,
-		// Set event's mask for sys WIN ComPort.
-		// Use EVENT_SET_MASK_ENUM for forming mask as (mask1 | mask2)
-	EV_SET,
-	//*****  Settins for _COMMTIMEOUTS struct  ************/
-	// Recomendation parameters for asynchronous regine: 100, 0, 0, 0, 0 (default in create port time)
-	// Time interval is set throught second parameter cfgValue.
-	T_READ_INTERVAL,						/* ReadIntervalTimeout - Maximum time between read chars.	*/
-	T_READ_TOTAL_MULTIPLIER,   	/* ReadTotalTimeoutMultiplier - Multiplier of characters.	*/
-	T_READ_TOTAL_CONSTANT,     	/* ReadTotalTimeoutConstant - Constant in milliseconds.		*/
-	T_WRITE_TOTAL_MULTIPLIER,  	/* WriteTotalTimeoutMultiplier - Multiplier of characters.*/
-	T_WRITE_TOTAL_CONSTANT,    	/* WriteTotalTimeoutConstant - Constant in milliseconds.	*/
-	}comParamInit_t;
-
-	/**
-	 * @brief 
-	 * @param param 
-	 * @return 
-	*/
-
-	/***************************************************************
-	* @brief Set parameters of com-port. May be used after create object of port and 
-	* if port is opened (if not - the file descriptor not defined).
-	* Configuration DCB, TIMEOUTS structs for communication throught com port
-	* @param	param <comParamInit_t>	- type of parameter. The PARAM_INIT_ENUM must be used
-	* @param	val   <uint32_t>	- value for parameter. See  PARAM_INIT_ENUM for description
-	* @return	<evtMask_t> EVT_NO (0) - parameter was set if without errors, or event mask about error.
-						If error - port handler is closed
-	****************************************************************/
-	comEvtMsk_t setParam(comParamInit_t param, uint32_t val = 0);
-
-
-	//typedef struct COM_PARAM_STRUCT
-	//{
-	//	comBaud_t baud;
-	//	char  parityChar = -1;				// != -1 - replace on char if parity error & parity != NO
-	//	char  evtChar = -1;						// != -1 - genegate event if byte was received
-	//	uint16_t number : 7;
-	//	uint16_t byteSize : 4;
-	//	uint16_t fOutxDsrFlow : 1;	// =1 - transmit only if DSR input = On. Use bool val us second param for on/off
-	//	uint16_t fOutxCtsFlow : 1;	// =1 - transmit if CTS input(on PC) (receiver ready) = on.
-	//	uint16_t fDsrSensitivity : 1;	// =1 - receive only if DSR input = On. Use bool val us second param for on/off
-	//	uint16_t fNull : 1;	// =1 - in Rx stream '\0' will be ignored
-	//	uint16_t fdefParamIsSet : 1;	// =1 - requared parameters are set
-	//	comDTRControl_t controlDTR : 2;		// control DTR out
-	//	comRTSControl_t controlRTS : 2;		// control RTS out
-	//	comStopBit_t stopBits : 4;
-	//	// if != NO - fParity will be to On state
-	//	comParity_t parity : 3;
-	//}comCfg_t;
-
+	/**********************************************************
+	 * @brief Set parameters struct of port.
+	The object must be created before setParam(comCfg_t&) use
+	***********************************************************/
 	class comCfg_t
 	{
 	public:
-		comBaud_t baud = B_NOT_CFG;
-		uint32_t fdefParamIsSet		: 1;	// =1 - requared parameters are set
-		uint32_t number						: 7;
-		uint32_t byteSize					: 4;
-		uint32_t fOutxDsrFlow			: 2;	// =1 - transmit only if DSR input = On. Use bool val us second param for on/off
-		uint32_t fOutxCtsFlow			: 2;	// =1 - transmit if CTS input(on PC) (receiver ready) = on.
-		uint32_t fDsrSensitivity	: 2;	// =1 - receive only if DSR input = On. Use bool val us second param for on/off
-		uint32_t fNull						: 2;	// =1 - in Rx stream '\0' will be ignored
-		comDTRControl_t controlDTR: 2;		// control DTR out
-		comRTSControl_t controlRTS: 3;		// control RTS out
-		comStopBit_t stopBits			: 2;
-		// if != NO - fParity will be to On state
-		comParity_t parity				: 3;
-		char  parityChar = COM_NOT_CFG_VALUE;		// != -1 - replace on char if parity error & parity != NO
-		char  evtChar = COM_NOT_CFG_VALUE;			// != -1 - genegate event if byte was received
+		/***	Connection for flow control		**********/
+		// 4(DTR - Data terminal ready)--->-- - 6 (DSR - Data set ready)
+		// 7(RTS - Request to Send)--->-- - 8 (CTS - Clear to Send - готовность приема)
+		// 8 (CTS - Clear to Send - -- - < -- - 7 (RTS - Request to Send)
+		// Libe DTR---->----DSR
 
-		comCfg_t() 
+		comBaud_t baud;									// Baud. Use BAUD_ENUM
+		int32_t number					: 7;		// number of port
+		int32_t byteSize				: 5;		// =4...8 bit
+		int32_t fOutxDsrFlow		: 2;		// =1 - transmit only if DSR input = On. 
+		int32_t fOutxCtsFlow		: 2;		// =1 - transmit if CTS input(on PC) (receiver ready) = on.
+		int32_t fDsrSensitivity : 2;		// =1 - receive only if DSR input = On.	
+		int32_t fNull						: 2;		// =1 - in Rx stream '\0' will be ignored
+		comDTRControl_t controlDTR: 2;	// control DTR out. Use DTR_CONTROL_ENUM
+		comRTSControl_t controlRTS: 3;	// control RTS out. Use RTS_CONTROL_ENUM
+		comStopBit_t stopBits			: 2;	// Num of stop bits. Use STOP_BIT_ENUM
+		// if != NO - fParity will be to On state
+		comParity_t parity				: 3;	// Parity check. Use PARITY_ENUM
+		char  parityChar;					// != -1 - replace on char if parity error & parity != NO
+		char  evtChar;						// != -1 - genegate event EVT_RX_USER_CHAR if byte was received
+		comEvtSetMsk_t evtSet;		// events mask for generate event
+
+		/********************************************************
+		 * @brief Constructor for default set val in new object
+		* Instruction about DCB:
+		* http://vsokovikov.narod.ru/New_MSDN_API/Comm_res/str_dcb.htm
+		* https://ru.wikibooks.org/wiki/COM-%D0%BF%D0%BE%D1%80%D1%82_%D0%B2_Windows_%28%D0%BF%D1%80%D0%BE%D0%B3%D1%80%D0%B0%D0%BC%D0%BC%D0%B8%D1%80%D0%BE%D0%B2%D0%B0%D0%BD%D0%B8%D0%B5%29
+		*********************************************************/
+		comCfg_t()
 		{
+			baud = B_NOT_CFG;				// Baud. Use BAUD_ENUM
 			number = COM_NOT_CFG_VALUE;
 			byteSize = COM_NOT_CFG_VALUE;
-			parity = P_NOT_CFG;
+			fOutxDsrFlow = COM_NOT_CFG_VALUE;			// =1 - transmit only if DSR input = On. 
+			fOutxCtsFlow = COM_NOT_CFG_VALUE;			// =1 - transmit if CTS input(on PC) (receiver ready) = on.
+			fDsrSensitivity = COM_NOT_CFG_VALUE;	// =1 - receive only if DSR input = On.
+			fNull = COM_NOT_CFG_VALUE;						// =1 - in Rx stream '\0' will be ignored
+			controlDTR = DTR_NOT_CFG;							// control DTR out
+			controlRTS = RTS_NOT_CFG;							// control RTS out
 			stopBits = SBIT_NOT_CFG;
-			fOutxDsrFlow = COM_NOT_CFG_VALUE;	// =1 - transmit only if DSR input = On. Use bool val us second param for on/off
-			fOutxCtsFlow = COM_NOT_CFG_VALUE;	// =1 - transmit if CTS input(on PC) (receiver ready) = on.
-			fDsrSensitivity = COM_NOT_CFG_VALUE;	// =1 - receive only if DSR input = On. Use bool val us second param for on/off
-			fNull = COM_NOT_CFG_VALUE;	// =1 - in Rx stream '\0' will be ignored
-			fdefParamIsSet = false;	// =1 - requared parameters are set
-			controlDTR = DTR_NOT_CFG;		// control DTR out
-			controlRTS = RTS_NOT_CFG;		// control RTS out
+			parity = P_NOT_CFG;
+			parityChar = COM_NOT_CFG_VALUE;		// != -1 - replace on char if parity error & parity != NO
+			evtChar = COM_NOT_CFG_VALUE;			// != -1 - genegate event EVT_RX_USER_CHAR if byte was received
+			evtSet = EVTSET_NOT_SET;					// not events as default
 		}
-
 	};
 
+	// operator | for set events mask us EVTSET_RX_CHAR | EVTSET_RX_USER_CHAR
+	// Using when setting up when setParam() used
+	friend comEvtSetMsk_t operator|(comEvtSetMsk_t l, comEvtSetMsk_t r);
 
-	/**
-	 * @brief 
-	 * @param param 
-	 * @return 
-	*/
+	// operator |= for set events mask us setEvtMsk |= EVTSET_RX_CHAR;
+	// Using when setting up when setParam() used
+	friend void operator|=(comEvtSetMsk_t& l, const comEvtSetMsk_t& r);
+
+	/***************************************************************
+	 * @brief Set parameters of com-port. May be used after create object of port and
+	 * if port is opened (if not - the file descriptor not defined).
+	 * Configuration DCB for communication throught com port
+	 * @param param <comCfg_t> - external struct of config. Must be set previously
+	 * @return <comEvtMsk_t>:	EVT_NO - set completted
+														EVT_ERR_INVALID_PARAM - not all parameters are set ore the settings are not correct
+	****************************************************************/
 	comEvtMsk_t setParam(comCfg_t& param);
-
-	/**
-	 * @brief 
-	 * @param param 
-	 * @return 
-	*/
-	comEvtMsk_t getParam(comCfg_t& param);
 
 	/*****************************************************************
 	 * @brief Check of event.
@@ -296,28 +202,32 @@ public:
 	bool checkEvent(comEvtMsk_t& events, comEvtMsk_t mask) const;
 
 	/**************************************************************
-	* @brief Open COM-port with default values 8N1 with EV_RX_CHAR (Win32 event) mask.
-	* Addition parameters will be set letter via setParam() function
-	* Creates a file descriptor.
+	* @brief Open COM-port.
+	* Parameters will be set letter via setParam() function
+	* Creates a file descriptor. 
 	* Timings set as: for Read 1 char - max, the rest coeffichience - 0
 	* (for without delays and wait operation).
+	* Description in http ://vsokovikov.narod.ru/New_MSDN_API/Menage_files/fn_createfile.htm
+	* https://ru.wikibooks.org/wiki/COM-%D0%BF%D0%BE%D1%80%D1%82_%D0%B2_Windows_%28%D0%BF%D1%80%D0%BE%D0%B3%D1%80%D0%B0%D0%BC%D0%BC%D0%B8%D1%80%D0%BE%D0%B2%D0%B0%D0%BD%D0%B8%D0%B5%29
 	* @param comNum	<int> - number of com port
 	* @param baud		<comBaud_t> - BaudRate. The BAUD_ENUM must be used
 	* @return				<evtMask_t> EVT_NO (0) - if OK, 
-									or event mask of EVT_COMM_MASK_ENUM and port handler is closed
+									or EVT_ERR_CRITICAL and port handler is closed
 	***************************************************************/
-	comEvtMsk_t open( int comNum, comBaud_t baud );
+	comEvtMsk_t open( int comNum, comBaud_t baud);
 
 	/**************************************************************
-	* @brief Open COM-port with default values 8N1 with EV_RX_CHAR (Win32 event) mask
-	* Addition parameters will be set letter via setParam() function
+	* @brief Open COM-port.
+	* Parameters will be set letter via setParam() function
 	* Creates a file descriptor.
 	* Timings set as: for Read 1 char - max, the rest coeffichience - 0
 	* (for without delays and wait operation).
+	* Description in http ://vsokovikov.narod.ru/New_MSDN_API/Menage_files/fn_createfile.htm
+	* https://ru.wikibooks.org/wiki/COM-%D0%BF%D0%BE%D1%80%D1%82_%D0%B2_Windows_%28%D0%BF%D1%80%D0%BE%D0%B3%D1%80%D0%B0%D0%BC%D0%BC%D0%B8%D1%80%D0%BE%D0%B2%D0%B0%D0%BD%D0%B8%D0%B5%29
 	* @param comName	<const char* const> - number of com port in the form "COM1" or "\\.\COM1"
-	* @param baud		<comBaud_t> - BaudRate. The BAUD_ENUM must be used
-	* @return				<evtMask_t> EVT_NO (0) - if OK,
-									or event mask of EVT_COMM_MASK_ENUM and port handler is closed
+	* @param baud			<comBaud_t> - BaudRate. The BAUD_ENUM must be used
+	* @return					<evtMask_t> EVT_NO (0) - if OK,
+										or EVT_ERR_CRITICAL and port handler is closed
 	***************************************************************/
 	comEvtMsk_t open( const char* const comName, comBaud_t baud );
 
@@ -331,10 +241,27 @@ public:
 	/****************************************************************
 	 * @brief Reopen of port with last parameters (port number, baud,...).
 	 * @return	<evtMask_t> EVT_NO (0) - if OK,
-								or event mask of EVT_COMM_MASK_ENUM and port handler is closed
+							or EVT_ERR_CRITICAL and port handler is closed
 	***************************************************************/
 	comEvtMsk_t reopen();
 
+	/**************************************************************
+	 * @brief Check port is opened or not
+	 * @return true if port is opened 
+	***************************************************************/
+	bool isPortOpened();
+
+	/*****************************************************************
+	 * @brief Return number of received Event user char, if used 
+	 * (user char must be set in setPAram() when config port)
+	 * @return number of received Event user char 
+	****************************************************************/
+	int userCharGetReceivedCounter();
+
+	/*****************************************************************
+	 * @brief Must be call after every "user char received" handler 
+	****************************************************************/
+	void userCharHandled();
 
 	/***********************************************************
 	****************	 Protected section	********************
@@ -342,7 +269,7 @@ public:
 protected:
 	Buffer m_rxBuf;			// buffer for Rx
 	Buffer m_txBuf;			// buffer for Rx
-	comCfg_t m_comCfg;
+	comCfg_t m_cfg;			// last cfg of port. For reopen()
 	/****************************************************************
 	 * @brief Create ComPortWin32 object.
 	 * Link com port object with external Rx & Tx Buffers
@@ -364,14 +291,14 @@ protected:
 	/*************************************************************
 	* @brief For periodically check win32 events for com (events mask must be set before where
 	* com parameters was set).
-	* checkWin32ComEvents() must be call automatically from time base handleEvent() 
+	* checkCoreEvents() must be call automatically from time base handleEvent() 
 	* if ComPort class using as observed throught IObsTimeBase.
 	* The period must be less than time when rx buffer's is full.
 	* If EV_RXCHAR event -> read win32 rx buffer while class rxBuf is not full
 	* (if full - the rest of data in win32 rx buffer are lost)
-	* @return	<evtMask_t> event mask of EVT_COMM_MASK_ENUM
+	* @return	<evtMask_t> event mask of EVT_COMM_MASK_ENUM (all)
 	*************************************************************/
-	comEvtMsk_t checkWin32ComEvents();
+	comEvtMsk_t checkCoreEvents();
 
 	/***************************************************************
 	* @brief Start of transmit data from tx buffer, while buffer is
@@ -394,21 +321,9 @@ protected:
 	****************	 Private section	********************
 	************************************************************/
 private:
-	static constexpr int EVT_CHAR_FICTIVE_VALUE = -1;
-	// Char for user char event. Generate event EVT_RX_USER_CHAR
-	// if char was detected in input stream.
-	// Char must be set as second param as setParam(USE_USER_CHAR_EVENT, '$')
-	char m_userChar = EVT_CHAR_FICTIVE_VALUE;
-	// Char for end of string char event. Generate event EVT_RX_EOF_CHAR
-	// if char was detected in input stream.
-	// Char must be set as second param as setParam(USE_EOF_CHAR_EVENT, '\n')
-	char m_eofChar = EVT_CHAR_FICTIVE_VALUE;
-	// Number of port after last connection
-	int m_comNumber = 0;
-	// Baud of port after last connection
-	comBaud_t m_comBaud = B_NOT_CFG;
 	HANDLE m_hPort = INVALID_HANDLE_VALUE;	// for CreateFile()
-	OVERLAPPED m_rxOverlap = { 0 };
+	OVERLAPPED m_rxOverlap = { 0 };					// struct of WIN32 events for ReadFile() 
+	int evtCharCnt = 0;											// counter received m_cfg.evtChar, if used
 
 
 

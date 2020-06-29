@@ -11,16 +11,16 @@ public:
 	
 	virtual void handleEvent(TimeBase& ref, TimeBase::evtMask_t) override;
 
-	virtual void handleEvent(ComPort& ref, ComPort::comEvtMsk_t evtMask) override
+	virtual void handleEvent(ComPort& ref, comEvtMsk_t evtMask) override
 	{
 		// 
 		if (evtMask & ref.EVT_RX_USER_CHAR) {
-		}
-		// 
-		if (evtMask & ref.EVT_RX_EOF_CHAR) {
-			char str[150] = {};
-			ref.getRxStr(str, sizeof(str), '\n');
-			std::cout << str;
+			while (ref.userCharGetReceivedCounter()) {
+				char str[150] = {};
+				ref.getRxStr(str, sizeof(str), '\n');
+				std::cout << str;
+				ref.userCharHandled();
+			}
 		}
 		// 
 		if (evtMask & ref.EVT_RX80_FULL) {
@@ -36,23 +36,21 @@ public:
 		}
 		// 
 		if (evtMask & ref.EVT_ERR_TX) {
-			std::cout << '\n' << "Error Tx" << '\n';
+			std::cout << "\n\n\n\nError Tx" << '\n';
 		}
 		// 
 		if (evtMask & ref.EVT_ERR_RX_BUF_OVF) {
-			std::cout << '\n' << "RX buf ovf err" << '\n';
-//			ref.close();
-			
+			std::cout << "\n\n\n\nRX buf ovf err" << '\n';
+		}
+		//
+		if (evtMask & ref.EVT_ERR_INVALID_PARAM) {
+			std::cout << "Invalid parameter.\n";
 		}
 		// 
 		if (evtMask & ref.EVT_ERR_CRITICAL) {
 			std::cout << '\n' << "Com critical error" << '\n';
-			ComPort::comEvtMsk_t events;
-			for (int i = 0; i < 10; ++i) {
-				events = ref.reopen();
-				if (ref.EVT_NO == events)
-					break;
-			}
+			comEvtMsk_t events;
+			events = ref.reopen();
 			if(ref.EVT_NO != events)
 				ref.close();
 		}

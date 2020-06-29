@@ -18,7 +18,7 @@ bool ComPort::getRxStr( char* str, int size, char ensSymbol )
 {
   int res;
   res = m_rxBuf.get( str, size, ensSymbol );
-  return ((res < 0) ? false : true);
+  return ((res == bufResultIsNG) ? false : true);
 }
 
 /***********************************************/
@@ -50,14 +50,31 @@ void ComPort::notifyObservers(comEvtMsk_t evtMask)
 bool ComPort::print(const char* cstr, char endSymbol)
 {
 	comEvtMsk_t evt = EVT_NO;
-	if (bufResultIsNG != m_txBuf.put(cstr, endSymbol)) {
-		evt = startTx();
+	if (!isPortOpened()) {
+		setEvent(evt, EVT_ERR_CRITICAL);
 	}
-	else {
-		setEvent(evt, EVT_ERR_TX);
+	if (EVT_NO == evt) {
+		if (bufResultIsNG != m_txBuf.put(cstr, endSymbol)) {
+			evt = startTx();
+		}
+		else {
+			setEvent(evt, EVT_ERR_TX);
+		}
 	}
-	if (evt) {
+	if (EVT_NO != evt) {
 		notifyObservers(evt);
+		return false;
 	}
-	return (evt == EVT_NO) ? true : false;
+	return true;
+}
+
+/**************************************************************/
+void ComPort::handleEvent(TimeBase&, TimeBase::evtMask_t)
+{
+	SysComPort_t::comEvtMsk_t events;
+	events = SysComPort_t::checkCoreEvents();
+	if (events)
+	{
+		notifyObservers(events);
+	}
 }
