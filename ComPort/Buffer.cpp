@@ -1,26 +1,24 @@
 #include "Buffer.h"
 
+#include <cassert>
 
 
-char Buffer::m_objectCounter = 0;
-
-Buffer::Buffer(char* _buf, int _size)
-	: m_data(_buf), m_size(_size)
+/**********************************************************/
+Buffer::Buffer(char* buf, int size)
+	: m_data(buf), m_size(size)
 {
-	//assert(((_buf && m_size != MIN_BUFFER_SIZE) || (!_buf))
-	//	&& "Size for external buffer  must be different from MIN_BUFFER_SIZE");
 	assert(m_size && "Buffer's size = 0");
-	assert(( m_size > sizeof(_size) * 4 )		// индекс не может занимать знаковый бит
-		&& "Size is big");
+	// the index can't occupy a signed bit
+	assert(( m_size > sizeof(size) * 4 )	&& "Size is big");
 	if (!m_data) {
 		m_data = new (std::nothrow) char[m_size];
 		if (!m_data)	return;
 		isDynamic_m_data = true;
 	}
 	clear();
-	++m_objectCounter;
 }
 
+/**********************************************************/
 Buffer::~Buffer()
 {
 	if (isDynamic_m_data) {
@@ -29,6 +27,7 @@ Buffer::~Buffer()
 	}
 }
 
+/**********************************************************/
 int Buffer::put(char byte)
 {
 	DISABLE_INTERRUPT;
@@ -46,55 +45,60 @@ int Buffer::put(char byte)
 	else { 
 		// overflow
 		m_state = OVF; 
+		ENABLE_INTERRUPT;
 		return bufResultNG;
 	}
 	ENABLE_INTERRUPT;
 	return m_front;
 }
 
-int Buffer::put(const char* str, char StrEndSymbol)
+/**********************************************************/
+int Buffer::put(const char* str)
 {
 	assert(str);
 	int i = 0;
-	while (str[i] == '\0') { ++i; }
-	char data = 1;
 	int ind = m_front;
-	while (str[i] != '\0') {
-		if (put((data = str[i])) == bufResultIsNG) {
+	char data = bufResultNG;
+	while (str[i] == '\0') { ++i; }
+	for (int res = bufResultNG; data != '\0'; ++i) {
+		data = str[i];
+		res = put(data);
+		if (res == bufResultIsNG) {
+			DISABLE_INTERRUPT;
 			m_front = ind;
 			calcLength();
 			return bufResultNG;
 		}
-		if (data == StrEndSymbol)
-			return m_front;
-		++i;
-	};
+	}
 	return m_front;
 }
 
-int Buffer::put(std::string& str, char StrEndSymbol)
+/**********************************************************/
+int Buffer::put(std::string& str)
 {
 	return put(str.c_str());
 }
 
+/**********************************************************/
 char Buffer::get()
 {
-	char byte = bufResultNG;
-	DISABLE_INTERRUPT;
+	char byte;
 	if (m_len)
 	{
+		DISABLE_INTERRUPT;
 		byte = m_data[m_end];
 		++m_end;
+		--m_len;
 		//организация кольца. указатели Front, End
 		if (m_end >= m_size) { m_end = 0; }
-		m_state = ((--m_len)) ? NORMAL : EMPTY;
+		m_state = (m_len) ? NORMAL : EMPTY;
 		ENABLE_INTERRUPT;
 		return byte;
 	}
-	ENABLE_INTERRUPT;
 	return bufResultIsNG;
 }
 
+/**********************************************************/
 char Buffer::get(int& index)
 {
 	char data = bufResultNG;
@@ -109,42 +113,114 @@ char Buffer::get(int& index)
 	return bufResultIsNG;
 }
 
-int Buffer::get(char* str, int sizeStr, char strEndSymbol)
+/**********************************************************/
+int Buffer::get(char* str, int sizeStr)
 {
-	assert(str);
+	assert(str && sizeStr);
 	int i = 0;
+	int ind = m_end;
+	char data = '\0';
 	--sizeStr;
-	while (1)
-	{
-		str[i] = get();
-		if (i == sizeStr || str[i] == bufResultIsNG) {
-			str[i] = '\0';
+	while (data == '\0') {
+		data = get();
+		if (data == bufResultIsNG) {
+			m_end = ind;
+			calcLength();
 			return bufResultNG;
 		}
-		if (str[i] == strEndSymbol)		
-			return m_end;
+	}
+	str[i] = data;
+	++i;
+
+	while (data != '\0') {
+		data = get();
+		if (i == sizeStr || data == bufResultIsNG) {
+			str[i] = '\0';
+			m_end = ind;
+			calcLength();
+			return bufResultNG;
+		}
+		str[i] = data;
 		++i;
 	}
+	return m_end;
 }
 
-int Buffer::get(std::string& str, char strEndSymbol)
+/**********************************************************/
+int Buffer::get(std::string& str)
 {
 	int i = 0;
-	//буфер не пустой и нет конца строки
-	while (1)
-	{
-		char data;
-		if ((data = get()) == bufResultIsNG) {
+	int ind = m_end;
+	char data = '\0';
+	while (data == '\0') {
+		data = get();
+		if (data == bufResultIsNG) {
+			m_end = ind;
+			calcLength();
 			return bufResultNG;
 		}
-		else
-			str.push_back(data);
-		if (data == strEndSymbol)
-			return m_end;
-		++i;
+	}
+	str.push_back(data);
+
+	while (data != '\0') {
+		data = get();
+		if (data == bufResultIsNG) {
+			m_end = ind;
+			calcLength();
+			return bufResultNG;
+		}
+		if (data == '\0') {
+			break;
+		}
+		str.push_back(data);
+	}
+	return m_end;
+}
+
+/*****************************************************/
+int Buffer::getBufSize() const	{
+	return m_size; 
+}
+
+/*****************************************************/
+int Buffer::getIndexForWrite() const {
+	return m_front; 
+}
+
+/*****************************************************/
+int Buffer::getIndexForRead() const {
+	return m_end; 
+}
+
+/*****************************************************/
+bool Buffer::checkIsNotEpty() const {
+	return (bool)m_len; 
+}
+
+/*****************************************************/
+bool Buffer::checkIsEpty() const {
+	return !(bool)m_len;
+}
+
+/*****************************************************/
+void Buffer::setIndexForWrite(int newIndexForWrite)
+{
+	if (newIndexForWrite >= 0 && newIndexForWrite < m_size) {
+		m_front = newIndexForWrite;
+		calcLength();
 	}
 }
 
+/*****************************************************/
+void Buffer::setIndexForRead(int newIndexForRead)
+{
+	if (newIndexForRead >= 0 && newIndexForRead < m_size) {
+		m_end = newIndexForRead;
+		calcLength();
+	}
+}
+
+/*****************************************************/
 void Buffer::resetIndex()
 {
 	DISABLE_INTERRUPT;
@@ -156,14 +232,14 @@ void Buffer::resetIndex()
 	ENABLE_INTERRUPT;
 }
 
-/****   Operators overflow	******/
-
+/*****************************************************/
 int Buffer::operator=(const char byte)
 {
 	clear();
 	return put(byte);
 }
 
+/*****************************************************/
 int Buffer::operator=(const char* str)
 {
 	assert(str);
@@ -171,28 +247,36 @@ int Buffer::operator=(const char* str)
 	return put(str);
 }
 
+/*****************************************************/
 int Buffer::operator=(std::string& str)
 {
 	clear();
 	return put(str);
 }
 
-int Buffer::operator+=(const char byte) { return put(byte); }
+/*****************************************************/
+int Buffer::operator+=(const char byte) { 
+	return put(byte); 
+}
 
-int Buffer::operator+=(const char* str) { return put(str); }
+/*****************************************************/
+int Buffer::operator+=(const char* str) {
+	return put(str); 
+}
 
-int Buffer::operator+=(std::string& str) { return put(str); }
+/*****************************************************/
+int Buffer::operator+=(std::string& str) {
+	return put(str); 
+}
 
+/*****************************************************/
 char Buffer::operator[](int index)
 {
 	assert(index >= 0 && index < m_size - 1);
 	return m_data[index];
 }
 
-
-/**********	 Other function		******************/
-/*************************************************/
-
+/*****************************************************/
 int Buffer::search(char byte)
 {
 	int point = m_end, tmp_p;
@@ -204,6 +288,7 @@ int Buffer::search(char byte)
 	return bufResultNG;
 }
 
+/*****************************************************/
 int Buffer::search(const char* str, bool isReturnIndAfterStr, int pStartInBuf)
 {
 	assert(str);
@@ -233,40 +318,6 @@ int Buffer::search(const char* str, bool isReturnIndAfterStr, int pStartInBuf)
 	}
 }
 
-int Buffer::jump(int numSteps, bool isUnconditionalJump)
-{
-	// безусловный прыжок
-	if (isUnconditionalJump) {
-		if (numSteps >= m_end) {
-			m_end = numSteps;
-			calcLength();
-			return m_end;
-		}
-		else return bufResultNG;
-	}
-	// последовательный
-	int tEnd = m_end;
-	while (numSteps && m_end != m_front) {
-		// вперед
-		if (numSteps >= 0) {
-			if ((++m_end) >= m_size)
-				m_end = 0;
-			--numSteps;
-		}
-		// назад
-		else {
-			if ((--m_end) < 0)
-				m_end = m_size - 1;
-			++numSteps;
-		}
-	}
-	if (m_end == m_front && numSteps != 0) {
-		m_end = tEnd;
-		return bufResultNG;
-	}
-	calcLength();
-	return m_end;
-}
 
 
 /*****			PRIVAT SECTION			 **********/

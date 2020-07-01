@@ -154,6 +154,7 @@
     <ClCompile Include="EventSystem.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="TimeBase.cpp" />
+    <ClCompile Include="utility.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Buffer.h" />
@@ -163,9 +164,13 @@
     <ClInclude Include="sysConst.h" />
     <ClInclude Include="TimeBase.h" />
     <ClInclude Include="TimeBaseWin32.h" />
+    <ClInclude Include="utility.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="ClassDiagram.cd" />
+  </ItemGroup>
+  <ItemGroup>
+    <Text Include="..\What Need to do.txt" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

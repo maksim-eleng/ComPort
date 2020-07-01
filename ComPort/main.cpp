@@ -6,33 +6,13 @@
 
 #include "ComPort.h"
 #include "EventSystem.h"
+#include "utility.h"
 
 using namespace std;
 char rxBuf[SysConst::rxBufSize];
 char txBuf[SysConst::rxBufSize];
 ComPort com(rxBuf, txBuf, sizeof(rxBuf), sizeof(txBuf));
 
-bool convStrToInt(const char* str, int& res)
-{
-	unsigned int tmpRes = 0;
-	int ind = 0;
-	res = 0;
-	if (str[ind] == '-')
-		++ind;
-	while (str[ind] != '\0') {
-		tmpRes *= 10;
-		if (str[ind] < '0' || str[ind] > '9')
-			return 0;
-		tmpRes += str[ind] - '0';
-		if (tmpRes > INT_MAX)
-			return 0;
-		++ind;
-	}
-	res = tmpRes;
-	if (str[0] == '-')	
-		res = -res;
-	return true;
-}
 
 int main(int argc, char* argv[])
 {
@@ -45,8 +25,6 @@ int main(int argc, char* argv[])
 	sysClk.addObserver(com, EVT_10MS);
 	com.addObserver(evt);
 	
-
-
 	{
 		int comNum = 0;
 		int baud = 0;
@@ -77,21 +55,22 @@ int main(int argc, char* argv[])
 			std::cout << "Com not connected";
 		else
 			std::cout << "Com" << comNum << " found and connected on " << baud << "\n";
+
+		comCfg_t cfg;
+		cfg.byteSize = 8;
+		cfg.parity = com.P_NO;
+		cfg.stopBits = com.SBIT_ONE;
+		cfg.evtChar = '\n';
+		events = com.setParam(cfg);
+		if (events) {
+			evt.handleEvent(com, events);
+		}
+		else {
+			com << "Start of system.\nComPort " << com.getPortNumber() << " was opened. Baud rate: " 
+				<< com.getBaud() << "\n";
+		}
 	}
 
-	comCfg_t cfg;
-	cfg.byteSize = 8;
-	cfg.parity = com.P_NO;
-	cfg.stopBits = com.SBIT_ONE;
-	cfg.evtChar = '\n';
-	events = com.setParam(cfg);
-
-	//events = com.EVT_ERR_CRITICAL;
-	//events = com.setParam(com.USE_USER_CHAR_EVENT, '$');
-	//events = com.setParam(com.USE_EOF_CHAR_EVENT, '\n');
-	if (events) {
-		evt.handleEvent(com, events);
-	}
 
 	while (1) {
 	

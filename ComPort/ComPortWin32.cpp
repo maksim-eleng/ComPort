@@ -273,20 +273,34 @@ ComPortWin32::comEvtMsk_t ComPortWin32::reopen()
 }
 
 /***********************************************************/
-bool ComPortWin32::isPortOpened()
+bool ComPortWin32::isPortOpened() const
 {
   return m_hPort != INVALID_HANDLE_VALUE;
 }
 
-int ComPortWin32::userCharGetReceivedCounter()
+int ComPortWin32::userCharGetReceivedCounter() const
 {
   return evtCharCnt;
 }
 
+/***********************************************************/
 void ComPortWin32::userCharHandled()
 {
   --evtCharCnt;
 }
+
+/***********************************************************/
+int ComPortWin32::getPortNumber() const
+{
+    return m_cfg.number;
+}
+
+/***********************************************************/
+int ComPortWin32::getBaud() const
+{
+  return m_cfg.baud;
+}
+
 
 /***********************************************************/
 ComPortWin32::ComPortWin32(char* const pRxBuf, char* const pTxBuf,
@@ -433,15 +447,16 @@ ComPortWin32::comEvtMsk_t ComPortWin32::startTx()
   DWORD err;
   comEvtMsk_t evt = EVT_NO;
   DWORD len = 0;
-  int lenTotal = 0;
   int cnt = 0;
 
   int index = m_txBuf.getIndexForRead();
+ 
   while (index != m_txBuf.getIndexForWrite())
   {
     // buffering data
     char data;
     len = 0;
+    // buffering data in buf
     while (len < sizeof(buf))
     {
       data = m_txBuf.get(index);
@@ -466,20 +481,16 @@ ComPortWin32::comEvtMsk_t ComPortWin32::startTx()
         err = GetLastError();
       }
       // len - writen bytes, err=ERROR_IO_PENDING || ERROR_IO_INCOMPLETE - OK
-      if (len && (err == ERROR_SUCCESS || err == ERROR_IO_PENDING || err == ERROR_IO_INCOMPLETE)) {
-        lenTotal += len;
-      }
-      // error of last transmit. Break of operation
-      else {
+      if (!len || (err != ERROR_SUCCESS && err != ERROR_IO_PENDING && err != ERROR_IO_INCOMPLETE)) {
+        // error of last transmit. Break of operation
         setEvent(evt, EVT_ERR_TX);
-        lenTotal = 0;
+        index = -1; // incorrect value for setIndexForRead() 
         break;
       }
     }
   }
-  // All ok - correction pointer in tx buffer, else - in previous state 
-  m_txBuf.jump(lenTotal, false);
-  
+  // All ok - correction pointer in tx buffer
+  m_txBuf.setIndexForRead(index);
   return evt;
 }
 

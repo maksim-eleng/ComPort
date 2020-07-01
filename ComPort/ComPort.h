@@ -43,16 +43,35 @@ public:
 	 * All observers are deleted. Additionally see descriptor in SysComPort_t path
 	************************************************************/
 	~ComPort();
+	
+	/************************************************
+	* @brief Print to port c_style string without terminator.
+	* If you want send string with terminator - use print(str, true)
+	* @param cstr	<const char*> - c_style string
+	* @return	<ComPort&> for use as com<<"ddd"<<"sss";
+	***********************************************/
+	ComPort& operator<<(const char* cstr)
+	{
+		print(cstr);
+		return *this;
+	}
+
+	/************************************************
+	* @brief Print to port integer.
+	* @param num	<const int> - integer
+	* @return	<ComPort&> for use as com<<"ddd"<<"sss";
+	***********************************************/
+	ComPort& operator<<(const int num);
 
 	/**************************************************************
-	* @brief Get C_style str from rx buffer
-	* @param str 				<char*>	- Pointer to dst external buffer
-	* @param size				<int>		- size of dst buffer
-	* @param ensSymbol	<ensSymbol> - end symbol of str like '\n' or '\0'
-	* @return	true - ok
-	*			false - end symbol not found befor end of rx buffer
+	 * @brief	Get string of c_style format from Rx buffer.
+	 * @param str <char*> - external buffer for destination.
+	 * @param sizeStr <int> - size of external buffer
+	 * @return next buffer's index for read operation
+	 *						or 	bufResultIsNG - the end of string not
+	 *						found before buffer is empty
 	**************************************************************/
-	bool getRxStr( char* str, int size, char ensSymbol = '\0' );
+	int getRxStr( char* str, int size);
 
 	/**********************************************
 	* @brief	Add observer for event  to another objects.
@@ -74,7 +93,30 @@ public:
 	 *					false - not ok. Inthis case EVT_ERR_CRITICAL, EVT_ERR_TX events may be 
 										transmit to observers
 	***********************************************/
-	bool print(const char* cstr, char endSymbol = '\0');
+	bool print(const char* cstr, bool fTxEndStr = false);
+
+	/****************************************************
+	 * @brief	Search symbol in Rx buffer in not readed range.
+	 * Buffer's indexes don't change.
+	 * @param byte <char> - char for search
+	 * @return <int> - index of buffer or bufResultNG if not found
+	*****************************************************/
+	int searchInRxBuf(char byte);
+
+	/****************************************************
+	 * @brief	Search c_style string in RX buffer in not readed range.
+	 * Buffer's indexes don't change.
+	 * @param str <const char* str> - string for search
+	 * @param isReturnIndAfterStr <bool>:
+	 *		if = false or not defined - the function return index in buffer where found start of input string
+	 *		if = true - the function return next index in buffer where found end of input string
+	 * @param pStartInBuf <int> - start index for search. If 0 or not defined - the seach begins
+	 *		with index for read operation
+	 * @return <int> - index of buffer or bufResultNG if not found
+	*****************************************************/
+	int searchInRxBuf(const char* str, bool isReturnIndAfterStr = false, int pStartInBuf = 0);
+
+
 
 
 	/***********************************************************

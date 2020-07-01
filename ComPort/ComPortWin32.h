@@ -249,19 +249,35 @@ public:
 	 * @brief Check port is opened or not
 	 * @return true if port is opened 
 	***************************************************************/
-	bool isPortOpened();
+	bool isPortOpened() const;
 
 	/*****************************************************************
 	 * @brief Return number of received Event user char, if used 
 	 * (user char must be set in setPAram() when config port)
 	 * @return number of received Event user char 
 	****************************************************************/
-	int userCharGetReceivedCounter();
+	int userCharGetReceivedCounter() const;
 
 	/*****************************************************************
 	 * @brief Must be call after every "user char received" handler 
 	****************************************************************/
 	void userCharHandled();
+
+	/*****************************************************************
+	 * @brief Return Number of port or COM_NOT_CFG_VALUE if not 
+	 * configured. If port was opened, but not now - return last 
+	 * configured.
+	 * @return Number of port
+	****************************************************************/
+	int getPortNumber() const;
+
+	/*****************************************************************
+	 * @brief Return Baud rate of port or COM_NOT_CFG_VALUE if not
+	 * configured. If port was opened, but not now - return last
+	 * configured.
+	 * @return Baud rate of port
+	****************************************************************/
+	int getBaud() const;
 
 	/***********************************************************
 	****************	 Protected section	********************

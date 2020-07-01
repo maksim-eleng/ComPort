@@ -17,7 +17,7 @@ public:
 		if (evtMask & ref.EVT_RX_USER_CHAR) {
 			while (ref.userCharGetReceivedCounter()) {
 				char str[150] = {};
-				ref.getRxStr(str, sizeof(str), '\n');
+				ref.getRxStr(str, sizeof(str));
 				std::cout << str;
 				ref.userCharHandled();
 			}

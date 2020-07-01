@@ -1,0 +1,13 @@
+
+-	Проверить работоспособность в Buffer и комментарии начиная с int operator+=(const char byte);:
+	int search(char byte);
+	int search(const char* str, bool isReturnIndAfterStr = false, int pStartInBuf = 0 );
+	operator<< должен передавать только строку без '\0'
+-	Убрать со всех ф-й endSymbol
+-	Изменить везде коменты
+-	
+-	
+-	Доделать оформление Buffer (private section)
+-	Разобрать закомментированное. 
+-	Реализовать поиск строки с быборкой (изменить то что есть)
+-	Реализовать копирование строки m_buf -> m_buf без промежуточного буфера

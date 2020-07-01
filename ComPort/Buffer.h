@@ -6,9 +6,9 @@
 
 */
 
-#include <string>
-#include <cassert>
+#include "SysConst.h"
 #include <stdint.h>
+#include <string>
 
 #define bufResultIsNG		-1
 #define bufResultNG			-1
@@ -16,6 +16,7 @@
 // minimum buffer size. default for dynamic data
 #define MIN_BUFFER_SIZE	512
 
+// disable/enuble interrupt for controller system
 #ifndef DISABLE_INTERRUPT
 #define DISABLE_INTERRUPT
 #endif
@@ -27,209 +28,256 @@
 class Buffer
 {
 /*****			PUBLIC SECTION			 ******/
-/**********************************************/
-/*****	  Constructors & destructors	 ******/
-/**********************************************/
 public:
 
 	/****************************************************
-	*****	Конструктор создания	*********************
-	При вызове конструктора по умолчанию создается буфер
-	с размером MIN_BUFFER_SIZE
-	При создании объекта счетчик объектов ++m_objectCounter
-	Вход:	char* _buf - указатель на уже имеющийся массив
-			char* _buf = 0 - ОП под буфер будет выделена динамически (по умолчанию)
-			int _size - размер массива для динамического выделения (=0 по умолчанию)
-	Создание объекта:
-	Buffer buf;	Buffer buf(NULL);	- с динамическим выделением, размер MIN_BUFFER_SIZE байт 
-	Buffer buf(NULL, 100);			- с динамическим выделением, размер 100 байт 
-	Buffer buf(buffer, sizeof(buffer));		- передача имени внешнего буфера, размер 100 байт
+	 * @brief	Constructor. By default create buffer with MIN_BUFFER_SIZE size
+	 * @param buf <char*> - external buffer. If not defined or ==0 - dynamic memory allocation with size=size
+	 * @param size <int> - size of buffer
+	 * @Create of object:	Buffer buf;	Buffer buf(NULL); - dynamic memory allocation with size=MIN_BUFFER_SIZE
+	 *										Buffer buf(NULL, 100); - dynamic memory allocation with size=100
+	 *										Buffer buf(buffer, sizeof(buffer)); - for external buffer.
 	*****************************************************/
-	Buffer(char* _buf = 0, int size = MIN_BUFFER_SIZE);
-	// Copyer constructor - not for use 
+	Buffer(char* buf = 0, int size = MIN_BUFFER_SIZE);
+
+	// Copying of objects is prohibited
  	Buffer(const Buffer& buf) = delete;
-	// Destructor 
+
 	/****************************************************
-	*****		Destructor			*********************
-	Если была выделена ОП динамически - освобождает
+	 * @brief	Destructor. If nenory for buffer was allocated dynamically - release
 	*****************************************************/
 	~Buffer();
 
-	/***************	Put section		**************/
-	/*************************************************/
-
 	/****************************************************
-	*****	Кладет символ в буфер 
+	 * @brief	Put char in buffer
+	 * @param byte <const char> - input char
+	 * @return next index of buffer for write operation 
+				or bufResultNG, if buffer is full
 	*****************************************************/
 	int put(const char byte);
+
 	/****************************************************
-	*****	Кладет строку в c_style в буфер		*********
-	Если строка начинается с '\0' - пропускается
-	Символ завершения строки переписывается, если !='\0'
-	Вход:	const char* str - может быть buf[] или "Hellow"
-			char StrEndSymbol - признак конца строки (по умолчанию '\0')
-	Выход:	индекс буфера для следующей записи или bufResultIsNG (=-1) - не успешно
-	Вызов:	buf.put("Hellow\n", '\n');	или		buf.put("Hellow");
+	 * @brief	Put c_str with terminator in buffer.
+	 * If string starts with 0 - not copy.
+	 * If function return bufResultNG, the buffer returns 
+	 * to previous state.
+	 * @param str <const char*> - input c_style string
+	 * @return next index of buffer for write operation
+				or bufResultNG, if buffer is full
 	*****************************************************/
-	int put(const char* str, char StrEndSymbol='\0');
+	int put(const char* str);
+
 	/****************************************************
-	*****	Кладет строку в std::string в буфер		*****
-	Если строка начинается с '\0' - пропускается
-	Символ завершения строки переписывается, если !='\0'
-	Вход:	std::string& str - class std::string
-			char StrEndSymbol - признак конца строки (по умолчанию '\0')
-	Выход:	индекс буфера для следующей записи или bufResultIsNG (=-1) - не успешно
+	 * @brief	Put std::string in buffer with terminator.
+	 * If string starts with 0 - not copy.
+	 * If function return bufResultNG, the buffer returns
+	 * to previous state.
+	 * @param str <std::string> - input string
+	 * @return next index of buffer for write operation
+				or bufResultNG, if buffer is full
 	*****************************************************/
-	int put(std::string& str, char StrEndSymbol = '\0');
-
-	/************	Get section		******************/
-	/*************************************************/
+	int put(std::string& str);
 
 	/****************************************************
-	*****	Return buffer;s size in byte	****************/
-	int getBufSize()	const { return m_size; }
-
-	/****************************************************
-	*****	Берет из буфера байт (char), если буфер не пустой	*****
-	Выход:	байт или bufResultIsNG (=-1), если буфер пустой
+	 * @brief	Get byte from buffer, if buffer is not empty
+	 * @return <char> or bufResultIsNG if buffer is empty
 	*****************************************************/
 	char get();
+	
 	/****************************************************
-	*****	Берет из буфера байт (char) по внешнему индексу, 
-	если не достигли головы буфера	*****
-	Не изменяет переменные буфера
-	Вход:	int& index - & на внешнюю переменную, инкрементируется по кольцу
-	Выход:	байт или bufResultIsNG (=-1), если достигли головы буфера
+	 * @brief	Get byte from buffer, if buffer is not empty
+	 * with using external integer index as buffer's index 
+	 * for read operation. Buffer's index does not change.
+	 * @return <char> or bufResultIsNG if buffer is empty
 	*****************************************************/
 	char get(int& index);
+
 	/****************************************************
-	*****	Берет из буфера строку с strEndSymbol включительно.
-	Строка-приеммник - в cstyle
-	В сулчае неполного чтения строки (достигнут конец буфера до чтения 
-	strEndSymbol или приеммник был ранее переполнен) - cтрока-приеммник завершается '\0',
-	возвращается bufResultNG
-	Вход:	char* str - cтрока-приеммник
-			int sizeStr - размер строки
-			char strEndSymbol - символ конца строки (='\0' по умолчанию)
-	Выход:	индекс буфера для следующего чтения или
-			bufResultNG, если чтение неудачно
-	Вызов:	index = buf.get(buffer, sizeof(buffer), '\n');
+	 * @brief	Get string in c_style format from buffer. 
+	 * If data in buffer starts with '\0' - not copy.
+	 * If function complete with error, the buffer returns
+	 * to previous state.
+	 * @param str <char*> - external buffer for destination.
+	 * @param sizeStr <int> - size of external buffer
+	 * @return next buffer's index for read operation
+	 *						or 	bufResultIsNG - terminator not 
+	 *						found before buffer is empty
 	*****************************************************/
-	int get(char* str, int sizeStr, char strEndSymbol = '\0');
+	int get(char* str, int sizeStr);
+
 	/****************************************************
-	*****	Берет из буфера строку с strEndSymbol включительно.
-	Строка-приеммник - std::string
-	В сулчае неполного чтения строки (достигнут конец буфера до чтения
-	strEndSymbol) - возвращается bufResultNG
-	Вход:	string& str - cтрока-приеммник
-			char strEndSymbol - символ конца строки (='\0' по умолчанию)
-	Выход:	индекс буфера для следующего чтения или
-			bufResultNG, если чтение неудачно
-	Вызов:	index = buf.get(string, '\n');
+	 * @brief	Get string from buffer.
+	 * If data in buffer starts with '\0' - not copy.
+	 * If function complete with error, the buffer returns
+	 * to previous state.
+	 * @param str <std::string> - external string for destination.
+	 * @return next buffer's index for read operation
+	 *						or 	bufResultIsNG - terminator not
+	 *						found before buffer is empty
 	*****************************************************/
-	int get(std::string& str, char strEndSymbol = '\0');
-	/* Get buffer index for Write operation*/
-	inline int getIndexForWrite() const	{ return m_front; }
-	/* Get buffer index for Read operation*/
-	inline int getIndexForRead() const	{ return m_end; }
-	/* Get number of created buffers */
-	inline static int getObjectCounter() { return m_objectCounter;}
-	/* Chech buffer. Return true, if not enpty*/
-	inline bool checkIsNotEpty()	{ return (bool)m_len; }
-	/* Chech buffer. Return true, if enpty*/
-	inline bool checkIsEpty()			{ return !(bool)m_len; }
-	/* Set buffer index for Write operation without check*/
-	inline void setIndexForWrite(int newFrontIndex) 
-		{
-		m_front = newFrontIndex;
-		calcLength();
-		}
-	/* Set buffer index for Read operation without check*/
-	inline void setIndexForRead(int newEndIndex)  {
-		m_end = newEndIndex;
-		calcLength();
-	}
-	/***************************************************************/
-	// Сбрасывание флагов состояния, установка адресов на начало буфера
+	int get(std::string& str);
+
+	/****************************************************
+	 * @brief Get size of buffer.
+	*****************************************************/
+	int getBufSize() const;
+
+	/****************************************************
+	 * @brief Get buffer index for Write operation
+	*****************************************************/
+	int getIndexForWrite() const;
+
+	/****************************************************
+	 * @brief Get buffer index for Read operation
+	*****************************************************/
+	int getIndexForRead() const;
+
+	/****************************************************
+	 * @brief Chech buffer. Return true, if not enpty
+	*****************************************************/
+	bool checkIsNotEpty() const;
+
+	/****************************************************
+	 * @brief Chech buffer. Return true, if enpty
+	*****************************************************/
+	bool checkIsEpty() const;
+
+	/***********************************************************
+	 * @brief Set buffer index for Write operation, if index in buffer range.
+	 * @param newIndexForWrite <int> - new index. Must be >=0 && < size of buffer
+	************************************************************/
+	void setIndexForWrite(int newIndexForWrite);
+
+	/***********************************************************
+	 * @brief Set buffer index for Read operation, if index in buffer range.
+	 * @param newIndexForWrite <int> - new index. Must be >=0 && < size of buffer
+	************************************************************/
+	void setIndexForRead(int newIndexForRead);
+
+	/***********************************************************
+	 * @brief Reset all buffer's index in start of buffer state.
+	************************************************************/
 	void resetIndex();
-
-
 
 	/****   Operators overflow	******/
 
-	/*	Группа operator= - то же что и put(), но с 
-		Предварительной очисткой буфера */
+	/***********************************************************
+	 * @brief operator= group is similar of put() with StrEndSymbol='\0', 
+	 * but with clear of buffer
+	************************************************************/
+	
+	/****************************************************
+	* @brief	Put char in buffer. 
+	* The buffer will be cleared before put.
+	* @param byte <const char> - input char
+	* @return next index of buffer for write operation
+			or bufResultNG, if buffer is full
+	*****************************************************/
 	int operator=(const char byte);
+
+	/****************************************************
+	 * @brief	Put c_str with terminator in buffer.
+	 * The buffer will be cleared before put.
+	 * If string starts with 0 - not copy.
+	 * If function return bufResultNG, the buffer returns
+	 * to previous state.
+	 * @param str <const char*> - input c_style string
+	 * @return next index of buffer for write operation
+				or bufResultNG, if buffer is full
+	*****************************************************/
 	int operator=(const char* str);
+
+	/****************************************************
+	 * @brief	Put std::strind in buffer.
+	 * The buffer will be cleared before put.
+	 * If string starts with 0 - not copy.
+	 * If function return bufResultNG, the buffer returns
+	 * to previous state.
+	 * @param str <std::string> - input string
+	 * @return next index of buffer for write operation
+				or bufResultNG, if buffer is full
+	*****************************************************/
 	int operator=(std::string& str);
-	// копирование объектов запрещено, в том числе через
-	// конструктор копирования
+
+	/****************************************************
+	* @brief	Copying of objects is prohibited,
+	* including copy constructor
+	*****************************************************/
 	Buffer& operator=(const Buffer& buf) = delete;
-	/*	Группа operator+= - аналогично с put()	*/
+
+	/***********************************************************
+	* @brief operator+= group is similar of put() with StrEndSymbol='\0'
+	************************************************************/
+
+	/****************************************************
+	* @brief	Put char in buffer.
+	* @param byte <const char> - input char
+	* @return next index of buffer for write operation
+			or bufResultNG, if buffer is full
+	*****************************************************/
 	int operator+=(const char byte);
+
+	/****************************************************
+	* @brief	Put c_str in buffer.
+	* If string starts with 0 - not copy.
+	* @param str <const char*> - input string
+	* @return next index of buffer for write operation
+			or bufResultNG, if buffer is full
+	*****************************************************/
 	int operator+=(const char* str);
+
+	/****************************************************
+	* @brief	Put std::string in buffer.
+	* If string starts with 0 - not copy.
+	* @param str <std::string> - input string
+	* @return next index of buffer for write operation
+			or bufResultNG, if buffer is full
+	*****************************************************/
 	int operator+=(std::string& str);
-	// берет байт из буфера по индексу
+
+	/****************************************************
+	 * @brief	Get byte from buffer, with using external
+	 * integer index. This index and buffer's index does not change.
+	 * @return <char> from buffer[index]
+	*****************************************************/
 	char operator[](int index);
 
 	/**********	 Other function		******************/
 	/*************************************************/
 
 	/****************************************************
-	*****	Поиск символа до головы буфера (непрочитанная область).
-	Не меняет переменные буфера.
-	Вход:	char byte - символ для поиска
-	Выход:	индекс буфера для найденнго символа или 
-			bufResultNG (=-1) - символ не найден
-	Вызов:	index = buf.search('\n');
+	 * @brief	Search symbol in buffer in not readed range. 
+	 * Buffer's indexes don't change.
+	 * @param byte <char> - char for search
+	 * @return <int> - index of buffer or bufResultNG if not found
 	*****************************************************/
 	int search(char byte);
+
 	/****************************************************
-	*****	Поиск строки в буфере до головы буфера (непрочитанная область).
-	Поиск ведется до '\0' в входной строке str, начиная с хвоста,
-	т.е. в области необработанных данных. 
-	Не меняет переменные буфера.
-	Вход:	const char* str - строка для поиска
-			bool isReturnIndAfterStr - определяет что возвращает ф-я: 
-				false - индекс начала строки str в буфере
-				true - индекс буфера после найденной строки в буфере 
-				По умолчанию = false
-			int pStartInBuf - начальный индекс поиска. По умолчанию =0 и становится на начало 
-				необработанных данных (на хвост буфера)
-	Выход:	индекс буфера начала найденной строки (если isReturnIndAfterStr=false) или
-			индекс буфера после найденной строки в буфере (если isReturnIndAfterStr=true) или
-			bufResultNG (=-1) - строка не найдена
-	Вызов:	index = buf.search("Hellow");	indexAfter = buf.search("Hellow", true);
+	 * @brief	Search c_style string in buffer in not readed range.
+	 * Buffer's indexes don't change.
+	 * @param str <const char* str> - string for search
+	 * @param isReturnIndAfterStr <bool>:
+	 *		if = false or not defined - the function return index in buffer where found start of input string 
+	 *		if = true - the function return next index in buffer where found end of input string
+	 * @param pStartInBuf <int> - start index for search. If 0 or not defined - the seach begins
+	 *		with index for read operation
+	 * @return <int> - index of buffer or bufResultNG if not found
 	*****************************************************/
 	int search(const char* str, bool isReturnIndAfterStr = false, int pStartInBuf = 0 );
+
+
 	/****************************************************
-	*****	Прыжок по буферу с изменением переменных буфера
-	Поддерживает: 
-		безусловный прыжок - если isUnconditionalJump = 1 (по умолчанию). 
-			numSteps - новых хвоста буфера. Должен принадлежать области необработанных данных.
-		Последовательный прыжок - isUnconditionalJump = 0
-			numSteps определяет кол-во шагов изменения хвоста буфера (выполняется
-			по кольцу). При достижении головы буфера - возврат в исходное состояние 
-			и ф-я возвращает bufResultNG (=-1)
-	Вход:	int numSteps - новое значение хвоста буфера (для безусловного прыжка).
-				Должен принадлежать области необработанных данных.
-				или кол-во шагов для изменения (знак определяет направление)
-			bool isUnconditionalJump - определяет метод прыжка: безусловный (по умолчанмю)
-				или последовательный
-	Выход:	новое значение хвоста буфера bufResultNG (=-1) - прыжок не выполнен
-	Вызов:	index = buf.jump(45);	index = buf.search(-10, false);
-	*****************************************************/
-	int jump(int numSteps, bool isUnconditionalJump = true);
-
-
-	
-/*****			PROTECTED SECTION			 ******/
-/**************************************************/
+	/*********			PROTECTED SECTION			 *************/
+	/***************************************************/
 protected:
 
-/*****			PRIVAT SECTION			 **********/
-/**************************************************/
+
+	/****************************************************
+	/*********			PRIVATE SECTION			 *************/
+	/***************************************************/
 private:
+
 	//Переменная состояния буфера
 	typedef enum BUF_STATE_ENUM
 	{
@@ -237,8 +285,6 @@ private:
 		NORMAL,	//нормальная работа буфера без переполнения
 		OVF		//буфер полностью забит
 	}BUF_STATE_ENUM;
-	// счетчик созданных объектов
-	static char m_objectCounter;
 
 	BUF_STATE_ENUM volatile m_state = EMPTY;  //Переменная состояния буфера
 	//указывает на свободную ячейку после записи в буфер
@@ -324,18 +370,7 @@ private:
 
 
 
-/********************************************************
-* *********** Изменение указателя End буферf.	*************
-* C переинициализацией остальных параметров буфера
-* Вход:		BUFFER_STRUCT *BufFl - указатель на буфер где прыгать
-* 				u16 newEnd - новое значение укзаателя End
-* Вызов:	bufChangeEnd(&uart[ch].rxBufFl, point);
-*********************************************************/
-/*void bufChangeEnd(BUFFER_STRUCT* BufFl, u16 newEnd)
-{
-	BufFl->End = newEnd;
-	bufCalcLength(BufFl);
-}
+
 
 /************************ (C) **END OF FILE****/
 

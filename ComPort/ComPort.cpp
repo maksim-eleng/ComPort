@@ -1,5 +1,5 @@
 #include "ComPort.h"
-
+#include "utility.h"
 
 /************************************************************/
 ComPort::ComPort(char* const pRxBuf, char* const pTxBuf,
@@ -14,11 +14,9 @@ ComPort::~ComPort()
 }
 
 /**************************************************************/
-bool ComPort::getRxStr( char* str, int size, char ensSymbol )
+int ComPort::getRxStr( char* str, int size)
 {
-  int res;
-  res = m_rxBuf.get( str, size, ensSymbol );
-  return ((res == bufResultIsNG) ? false : true);
+  return m_rxBuf.get( str, size);
 }
 
 /***********************************************/
@@ -47,18 +45,28 @@ void ComPort::notifyObservers(comEvtMsk_t evtMask)
 }
 
 /**************************************************************/
-bool ComPort::print(const char* cstr, char endSymbol)
+bool ComPort::print(const char* cstr, bool fTxEndStr)
 {
 	comEvtMsk_t evt = EVT_NO;
 	if (!isPortOpened()) {
 		setEvent(evt, EVT_ERR_CRITICAL);
 	}
 	if (EVT_NO == evt) {
-		if (bufResultIsNG != m_txBuf.put(cstr, endSymbol)) {
-			evt = startTx();
+		int i = 0;
+		int res;
+		while (cstr[i] == '\0') { ++i; }
+		while (cstr[i] != '\0') {
+			res = m_txBuf.put(cstr[i]);
+			++i;
+		}
+		if (fTxEndStr) {
+			res = m_txBuf.put(cstr[i]);
+		}
+		if (bufResultIsNG == res) {
+			setEvent(evt, EVT_ERR_TX);
 		}
 		else {
-			setEvent(evt, EVT_ERR_TX);
+			evt = startTx();
 		}
 	}
 	if (EVT_NO != evt) {
@@ -66,6 +74,27 @@ bool ComPort::print(const char* cstr, char endSymbol)
 		return false;
 	}
 	return true;
+}
+
+/**************************************************************/
+int ComPort::searchInRxBuf(char byte)
+{
+	return m_rxBuf.search(byte);
+}
+
+/**************************************************************/
+int ComPort::searchInRxBuf(const char* str, bool isReturnIndAfterStr, int pStartInBuf)
+{
+	return m_rxBuf.search(str, isReturnIndAfterStr, pStartInBuf);
+}
+
+/**************************************************************/
+ComPort& ComPort::operator<<(const int num)
+{
+	char cstr[12];
+	convIntToStr(num, cstr);
+	print(cstr);
+	return *this;
 }
 
 /**************************************************************/
