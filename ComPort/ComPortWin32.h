@@ -10,7 +10,7 @@ class ComPortWin32
 {
 public:
 
-	static constexpr auto COM_NOT_CFG_VALUE = -1;
+	static constexpr auto COM_NOT_CFG = -1;
 
 	/************************************************************
 	 * @brief Com port event masks. Must be set by means of setEvent()
@@ -45,7 +45,7 @@ public:
 	**********************************************************/
 	typedef enum BAUD_ENUM
 	{
-		B_NOT_CFG	= COM_NOT_CFG_VALUE,
+		B_NOT_CFG	= COM_NOT_CFG,
 		B_1200		= CBR_1200,
 		B_2400		= CBR_2400,
 		B_4800		= CBR_4800,
@@ -64,7 +64,7 @@ public:
 		P_EVEN	= EVENPARITY,
 		P_MARK	= MARKPARITY,
 		P_SPACE	= SPACEPARITY,
-		P_NOT_CFG = COM_NOT_CFG_VALUE,
+		P_NOT_CFG = COM_NOT_CFG,
 	}comParity_t;
 
 	/*********************************************************
@@ -75,7 +75,7 @@ public:
 		SBIT_ONE		= ONESTOPBIT,
 		SBIT_ONE5		= ONE5STOPBITS,
 		SBIT_TWO		= TWOSTOPBITS,
-		SBIT_NOT_CFG = COM_NOT_CFG_VALUE,
+		SBIT_NOT_CFG = COM_NOT_CFG,
 	}comStopBit_t;
 
 	/*********************************************************
@@ -86,7 +86,7 @@ public:
 		DTR_DISABLE		= DTR_CONTROL_DISABLE,		// DTR out =0ff if COM-port is opened. State can be changed by function EscapeCommFunction()
 		DTR_ENABLE		= DTR_CONTROL_ENABLE,			// DTR out =0n if COM-port is opened. State can be changed by function EscapeCommFunction()	
 		DTR_HANDSHAKE = DTR_CONTROL_HANDSHAKE,	// DTR out = 0n / Off automatically if COM - port is opened / closed
-		DTR_NOT_CFG		= COM_NOT_CFG_VALUE,
+		DTR_NOT_CFG		= COM_NOT_CFG,
 	}comDTRControl_t;
 
 	/*********************************************************
@@ -98,7 +98,7 @@ public:
 		RTS_ENABLE		= RTS_CONTROL_ENABLE,
 		RTS_HANDSHAKE = RTS_CONTROL_HANDSHAKE,
 		RTS_TOGGLE		= RTS_CONTROL_TOGGLE,
-		RTS_NOT_CFG		= COM_NOT_CFG_VALUE,
+		RTS_NOT_CFG		= COM_NOT_CFG,
 	}comRTSControl_t;
 
 	///*********************************************************
@@ -158,20 +158,20 @@ public:
 		*********************************************************/
 		comCfg_t()
 		{
-			baud = B_NOT_CFG;				// Baud. Use BAUD_ENUM
-			number = COM_NOT_CFG_VALUE;
-			byteSize = COM_NOT_CFG_VALUE;
-			fOutxDsrFlow = COM_NOT_CFG_VALUE;			// =1 - transmit only if DSR input = On. 
-			fOutxCtsFlow = COM_NOT_CFG_VALUE;			// =1 - transmit if CTS input(on PC) (receiver ready) = on.
-			fDsrSensitivity = COM_NOT_CFG_VALUE;	// =1 - receive only if DSR input = On.
-			fNull = COM_NOT_CFG_VALUE;						// =1 - in Rx stream '\0' will be ignored
-			controlDTR = DTR_NOT_CFG;							// control DTR out
-			controlRTS = RTS_NOT_CFG;							// control RTS out
+			baud = B_NOT_CFG;						// Baud. Use BAUD_ENUM
+			number = COM_NOT_CFG;
+			byteSize = COM_NOT_CFG;
+			fOutxDsrFlow = COM_NOT_CFG;			// =1 - transmit only if DSR input = On. 
+			fOutxCtsFlow = COM_NOT_CFG;			// =1 - transmit if CTS input(on PC) (receiver ready) = on.
+			fDsrSensitivity = COM_NOT_CFG;	// =1 - receive only if DSR input = On.
+			fNull = COM_NOT_CFG;						// =1 - in Rx stream '\0' will be ignored
+			controlDTR = DTR_NOT_CFG;				// control DTR out
+			controlRTS = RTS_NOT_CFG;				// control RTS out
 			stopBits = SBIT_NOT_CFG;
 			parity = P_NOT_CFG;
-			parityChar = COM_NOT_CFG_VALUE;		// != -1 - replace on char if parity error & parity != NO
-			evtChar = COM_NOT_CFG_VALUE;			// != -1 - genegate event EVT_RX_USER_CHAR if byte was received
-			evtSet = EVTSET_NOT_SET;					// not events as default
+			parityChar = COM_NOT_CFG;		// != -1 - replace on char if parity error & parity != NO
+			evtChar = COM_NOT_CFG;			// != -1 - genegate event EVT_RX_USER_CHAR if byte was received
+			evtSet = EVTSET_NOT_SET;		// not events as default
 		}
 	};
 
@@ -186,7 +186,7 @@ public:
 	/***************************************************************
 	 * @brief Set parameters of com-port. May be used after create object of port and
 	 * if port is opened (if not - the file descriptor not defined).
-	 * Configuration DCB for communication throught com port
+	 * Configuration DCB, timeouts, events for WIN32 port.
 	 * @param param <comCfg_t> - external struct of config. Must be set previously
 	 * @return <comEvtMsk_t>:	EVT_NO - set completted
 														EVT_ERR_INVALID_PARAM - not all parameters are set ore the settings are not correct
@@ -340,8 +340,6 @@ private:
 	HANDLE m_hPort = INVALID_HANDLE_VALUE;	// for CreateFile()
 	OVERLAPPED m_rxOverlap = { 0 };					// struct of WIN32 events for ReadFile() 
 	int evtCharCnt = 0;											// counter received m_cfg.evtChar, if used
-
-
 
 };
 

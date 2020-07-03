@@ -46,26 +46,26 @@ ComPortWin32::comEvtMsk_t ComPortWin32::setParam(ComPortWin32::comCfg_t& ref)
     set.baud = ref.baud;
     dcb.BaudRate = ref.baud;
   }
-  if (ref.number != COM_NOT_CFG_VALUE) {
+  if (ref.number != COM_NOT_CFG) {
     set.number = ref.number;
   }
-  if (ref.byteSize != COM_NOT_CFG_VALUE) {
+  if (ref.byteSize != COM_NOT_CFG) {
     set.byteSize = ref.byteSize;
     dcb.ByteSize = ref.byteSize;
   }
-  if (ref.fOutxDsrFlow != COM_NOT_CFG_VALUE) {
+  if (ref.fOutxDsrFlow != COM_NOT_CFG) {
     set.fOutxDsrFlow = ref.fOutxDsrFlow;
     dcb.fOutxDsrFlow = ref.fOutxDsrFlow;
   }
-  if (ref.fOutxCtsFlow != COM_NOT_CFG_VALUE) {
+  if (ref.fOutxCtsFlow != COM_NOT_CFG) {
     set.fOutxCtsFlow = ref.fOutxCtsFlow;
     dcb.fOutxCtsFlow = ref.fOutxCtsFlow;
   }
-  if (ref.fDsrSensitivity != COM_NOT_CFG_VALUE) {
+  if (ref.fDsrSensitivity != COM_NOT_CFG) {
     set.fDsrSensitivity = ref.fDsrSensitivity;
     dcb.fDsrSensitivity = ref.fDsrSensitivity;
   }
-  if (ref.fNull != COM_NOT_CFG_VALUE) {
+  if (ref.fNull != COM_NOT_CFG) {
     set.fNull = ref.fNull;
     dcb.fNull = ref.fNull;
   }
@@ -88,14 +88,14 @@ ComPortWin32::comEvtMsk_t ComPortWin32::setParam(ComPortWin32::comCfg_t& ref)
       dcb.fParity = true;
     }
   }
-  if (ref.parityChar != COM_NOT_CFG_VALUE) {
+  if (ref.parityChar != COM_NOT_CFG) {
     set.parityChar = ref.parityChar;
     dcb.fErrorChar = true;
   }
-  if (ref.evtChar != COM_NOT_CFG_VALUE) {
+  if (ref.evtChar != COM_NOT_CFG) {
     set.evtChar = ref.evtChar;
-    set.evtSet |= EVTSET_RX_USER_CHAR;
     dcb.EvtChar = ref.evtChar;
+    set.evtSet |= EVTSET_RX_USER_CHAR;
   }
   if (ref.evtSet != EVTSET_NOT_SET) {
     if (fPortReady) {
@@ -111,12 +111,12 @@ ComPortWin32::comEvtMsk_t ComPortWin32::setParam(ComPortWin32::comCfg_t& ref)
   // 2. byteSize = 4...8
   // 3. if parity char was set - parity type must be set too
   if ((set.baud   == B_NOT_CFG) || 
-    set.number    == COM_NOT_CFG_VALUE ||
+    set.number    == COM_NOT_CFG ||
     set.stopBits  == SBIT_NOT_CFG ||
     set.parity    == P_NOT_CFG ||
     set.evtSet    == EVTSET_NOT_SET ||
     ( set.byteSize < 4 || set.byteSize > 8) ||
-    (set.parityChar != COM_NOT_CFG_VALUE && (set.parity == P_NOT_CFG || set.parity == P_NO)) )  {
+    (set.parityChar != COM_NOT_CFG && (set.parity == P_NOT_CFG || set.parity == P_NO)) )  {
     setEvent(evt, EVT_ERR_INVALID_PARAM);
   }
 
@@ -394,12 +394,12 @@ ComPortWin32::comEvtMsk_t ComPortWin32::checkCoreEvents()
           int byte;
           byte = m_rxBuf.put(buf[i]);
           // if buffer is overflow - correction buffer and set events
-          if (byte == bufResultIsNG) {
+          if (byte == bufResultNG) {
             setEvent(events, EVT_ERR_RX_BUF_OVF);
             break;
           }
           // if Event char was detected in input stream
-          if (buf[i] == m_cfg.evtChar && m_cfg.evtChar != COM_NOT_CFG_VALUE) {
+          if (buf[i] == m_cfg.evtChar) {
             setEvent(events, EVT_RX_USER_CHAR);
             ++evtCharCnt;
           }
@@ -460,7 +460,7 @@ ComPortWin32::comEvtMsk_t ComPortWin32::startTx()
     while (len < sizeof(buf))
     {
       data = m_txBuf.get(index);
-      if (data != bufResultIsNG) {
+      if (data != bufResultNG) {
         buf[len] = data;
         ++len;
       }

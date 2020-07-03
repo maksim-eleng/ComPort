@@ -2,7 +2,6 @@
 
 #include <cassert>
 
-
 /**********************************************************/
 Buffer::Buffer(char* buf, int size)
 	: m_data(buf), m_size(size)
@@ -40,11 +39,9 @@ int Buffer::put(char byte)
 		++m_front;
 		//организация кольца. указатели Front, End
 		if (m_front >= m_size) { m_front = 0; }
-		if (m_state != OVF) { m_state = NORMAL; }
 	}
 	else { 
 		// overflow
-		m_state = OVF; 
 		ENABLE_INTERRUPT;
 		return bufResultNG;
 	}
@@ -53,17 +50,22 @@ int Buffer::put(char byte)
 }
 
 /**********************************************************/
-int Buffer::put(const char* str)
+int Buffer::put(const char* str, bool fPutTerminator)
 {
 	assert(str);
 	int i = 0;
 	int ind = m_front;
-	char data = bufResultNG;
+	char data = BUF_NOT_CFG;
+
 	while (str[i] == '\0') { ++i; }
+
 	for (int res = bufResultNG; data != '\0'; ++i) {
 		data = str[i];
+		if (data == '\0' && !fPutTerminator) { 
+			break; 
+		}
 		res = put(data);
-		if (res == bufResultIsNG) {
+		if (res == bufResultNG) {
 			DISABLE_INTERRUPT;
 			m_front = ind;
 			calcLength();
@@ -74,9 +76,9 @@ int Buffer::put(const char* str)
 }
 
 /**********************************************************/
-int Buffer::put(std::string& str)
+int Buffer::put(std::string& str, bool fPutTerminator)
 {
-	return put(str.c_str());
+	return put(str.c_str(), fPutTerminator);
 }
 
 /**********************************************************/
@@ -91,11 +93,10 @@ char Buffer::get()
 		--m_len;
 		//организация кольца. указатели Front, End
 		if (m_end >= m_size) { m_end = 0; }
-		m_state = (m_len) ? NORMAL : EMPTY;
 		ENABLE_INTERRUPT;
 		return byte;
 	}
-	return bufResultIsNG;
+	return bufResultNG;
 }
 
 /**********************************************************/
@@ -110,7 +111,7 @@ char Buffer::get(int& index)
 		if (index >= m_size) { index = 0; }
 		return data;
 	}
-	return bufResultIsNG;
+	return bufResultNG;
 }
 
 /**********************************************************/
@@ -123,7 +124,7 @@ int Buffer::get(char* str, int sizeStr)
 	--sizeStr;
 	while (data == '\0') {
 		data = get();
-		if (data == bufResultIsNG) {
+		if (data == bufResultNG) {
 			m_end = ind;
 			calcLength();
 			return bufResultNG;
@@ -134,7 +135,7 @@ int Buffer::get(char* str, int sizeStr)
 
 	while (data != '\0') {
 		data = get();
-		if (i == sizeStr || data == bufResultIsNG) {
+		if (i == sizeStr || data == bufResultNG) {
 			str[i] = '\0';
 			m_end = ind;
 			calcLength();
@@ -152,9 +153,10 @@ int Buffer::get(std::string& str)
 	int i = 0;
 	int ind = m_end;
 	char data = '\0';
+	
 	while (data == '\0') {
 		data = get();
-		if (data == bufResultIsNG) {
+		if (data == bufResultNG) {
 			m_end = ind;
 			calcLength();
 			return bufResultNG;
@@ -164,13 +166,10 @@ int Buffer::get(std::string& str)
 
 	while (data != '\0') {
 		data = get();
-		if (data == bufResultIsNG) {
+		if (data == bufResultNG) {
 			m_end = ind;
 			calcLength();
 			return bufResultNG;
-		}
-		if (data == '\0') {
-			break;
 		}
 		str.push_back(data);
 	}
@@ -228,7 +227,6 @@ void Buffer::resetIndex()
 	m_end = 0;
 	m_len = 0;
 	m_maxLen = 0;
-	m_state = EMPTY;
 	ENABLE_INTERRUPT;
 }
 
@@ -242,7 +240,6 @@ int Buffer::operator=(const char byte)
 /*****************************************************/
 int Buffer::operator=(const char* str)
 {
-	assert(str);
 	clear();
 	return put(str);
 }
@@ -289,7 +286,7 @@ int Buffer::search(char byte)
 }
 
 /*****************************************************/
-int Buffer::search(const char* str, bool isReturnIndAfterStr, int pStartInBuf)
+int Buffer::search(const char* str, int pStartInBuf, bool isReturnIndAfterStr)
 {
 	assert(str);
 	if (!pStartInBuf || pStartInBuf < m_end)
@@ -318,6 +315,61 @@ int Buffer::search(const char* str, bool isReturnIndAfterStr, int pStartInBuf)
 	}
 }
 
+/*****************************************************/
+bool Buffer::copyStrTo(Buffer& dstBuf)
+{
+	int end = m_end;
+	int front = dstBuf.m_front;
+	char data = '\0';
+
+	while (data == '\0') {
+		data = get(end);
+		if (data == bufResultNG) {
+			return false;
+		}
+	}
+
+	while (data != '\0') {
+		data = get(end);
+		if (data == bufResultNG) {
+			dstBuf.setIndexForWrite(front);
+			dstBuf.calcLength();
+			return false;
+		}
+		dstBuf.put(data);
+	}
+	return true;
+}
+
+/*****************************************************/
+bool Buffer::transferStrTo(Buffer& dstBuf)
+{
+	int end = m_end;
+	int front = dstBuf.m_front;
+	char data = '\0';
+
+	while (data == '\0') {
+		data = get();
+		if (data == bufResultNG) {
+			m_end = end;
+			calcLength();
+			return false;
+		}
+	}
+
+	while (data != '\0') {
+		data = get();
+		if (data == bufResultNG) {
+			setIndexForWrite(front);
+			calcLength();
+			dstBuf.setIndexForWrite(front);
+			dstBuf.calcLength();
+			return false;
+		}
+		dstBuf.put(data);
+	}
+	return true;
+}
 
 
 /*****			PRIVAT SECTION			 **********/
@@ -335,7 +387,6 @@ void Buffer::calcLength()
 {
 	DISABLE_INTERRUPT;
 	m_len = (m_front >= m_end) ? (m_front - m_end) : (m_size - m_end + m_front );
-	m_state = (m_len) ? NORMAL : EMPTY;
 	ENABLE_INTERRUPT;
 }
 

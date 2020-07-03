@@ -14,6 +14,22 @@ ComPort::~ComPort()
 }
 
 /**************************************************************/
+ComPort& ComPort::operator<<(const char* cstr)
+{
+	print(cstr);
+	return *this;
+}
+
+/**************************************************************/
+ComPort& ComPort::operator<<(const int num)
+{
+	char cstr[12];
+	convIntToStr(num, cstr);
+	print(cstr);
+	return *this;
+}
+
+/**************************************************************/
 int ComPort::getRxStr( char* str, int size)
 {
   return m_rxBuf.get( str, size);
@@ -45,24 +61,19 @@ void ComPort::notifyObservers(comEvtMsk_t evtMask)
 }
 
 /**************************************************************/
-bool ComPort::print(const char* cstr, bool fTxEndStr)
+bool ComPort::print(const char* cstr)
 {
 	comEvtMsk_t evt = EVT_NO;
 	if (!isPortOpened()) {
 		setEvent(evt, EVT_ERR_CRITICAL);
 	}
 	if (EVT_NO == evt) {
-		int i = 0;
 		int res;
-		while (cstr[i] == '\0') { ++i; }
-		while (cstr[i] != '\0') {
-			res = m_txBuf.put(cstr[i]);
-			++i;
-		}
-		if (fTxEndStr) {
-			res = m_txBuf.put(cstr[i]);
-		}
-		if (bufResultIsNG == res) {
+		bool fPutTerm = false;
+		if(m_cfg.evtChar == '\0')
+			fPutTerm = true;
+		res = m_txBuf.put(cstr, fPutTerm);
+		if (bufResultNG == res) {
 			setEvent(evt, EVT_ERR_TX);
 		}
 		else {
@@ -76,6 +87,11 @@ bool ComPort::print(const char* cstr, bool fTxEndStr)
 	return true;
 }
 
+bool ComPort::print(std::string str)
+{
+	return print(str.c_str());
+}
+
 /**************************************************************/
 int ComPort::searchInRxBuf(char byte)
 {
@@ -86,15 +102,6 @@ int ComPort::searchInRxBuf(char byte)
 int ComPort::searchInRxBuf(const char* str, bool isReturnIndAfterStr, int pStartInBuf)
 {
 	return m_rxBuf.search(str, isReturnIndAfterStr, pStartInBuf);
-}
-
-/**************************************************************/
-ComPort& ComPort::operator<<(const int num)
-{
-	char cstr[12];
-	convIntToStr(num, cstr);
-	print(cstr);
-	return *this;
 }
 
 /**************************************************************/

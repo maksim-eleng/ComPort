@@ -7,6 +7,7 @@
 #include "ComPort.h"
 #include "EventSystem.h"
 #include "utility.h"
+#include <iostream>
 
 using namespace std;
 char rxBuf[SysConst::rxBufSize];
@@ -66,11 +67,10 @@ int main(int argc, char* argv[])
 			evt.handleEvent(com, events);
 		}
 		else {
-			com << "Start of system.\nComPort " << com.getPortNumber() << " was opened. Baud rate: " 
+			com << "Start of system.\n" << "ComPort №" << com.getPortNumber() << " was opened. Baud rate: " \
 				<< com.getBaud() << "\n";
 		}
 	}
-
 
 	while (1) {
 	

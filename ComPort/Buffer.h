@@ -10,11 +10,11 @@
 #include <stdint.h>
 #include <string>
 
-#define bufResultIsNG		-1
 #define bufResultNG			-1
+#define BUF_NOT_CFG			-1
 
 // minimum buffer size. default for dynamic data
-#define MIN_BUFFER_SIZE	512
+#define MIN_BUF_SIZE	512
 
 // disable/enuble interrupt for controller system
 #ifndef DISABLE_INTERRUPT
@@ -38,7 +38,7 @@ public:
 	 *										Buffer buf(NULL, 100); - dynamic memory allocation with size=100
 	 *										Buffer buf(buffer, sizeof(buffer)); - for external buffer.
 	*****************************************************/
-	Buffer(char* buf = 0, int size = MIN_BUFFER_SIZE);
+	Buffer(char* buf = 0, int size = MIN_BUF_SIZE);
 
 	// Copying of objects is prohibited
  	Buffer(const Buffer& buf) = delete;
@@ -57,26 +57,28 @@ public:
 	int put(const char byte);
 
 	/****************************************************
-	 * @brief	Put c_str with terminator in buffer.
+	 * @brief	Put c_str in buffer without terminator or with. 
 	 * If string starts with 0 - not copy.
 	 * If function return bufResultNG, the buffer returns 
 	 * to previous state.
 	 * @param str <const char*> - input c_style string
+	 * @param fPutTerminator <bool> = true - put str + terminator
 	 * @return next index of buffer for write operation
 				or bufResultNG, if buffer is full
 	*****************************************************/
-	int put(const char* str);
+	int put(const char* str, bool fPutTerminator = false);
 
 	/****************************************************
-	 * @brief	Put std::string in buffer with terminator.
+	 * @brief	Put std::string in buffer without terminator or with.
 	 * If string starts with 0 - not copy.
 	 * If function return bufResultNG, the buffer returns
 	 * to previous state.
 	 * @param str <std::string> - input string
+	 * @param fPutTerminator <bool> = true - put str + terminator
 	 * @return next index of buffer for write operation
 				or bufResultNG, if buffer is full
 	*****************************************************/
-	int put(std::string& str);
+	int put(std::string& str, bool fPutTerminator = false);
 
 	/****************************************************
 	 * @brief	Get byte from buffer, if buffer is not empty
@@ -106,7 +108,7 @@ public:
 	int get(char* str, int sizeStr);
 
 	/****************************************************
-	 * @brief	Get string from buffer.
+	 * @brief	Get std::string from buffer.
 	 * If data in buffer starts with '\0' - not copy.
 	 * If function complete with error, the buffer returns
 	 * to previous state.
@@ -162,7 +164,7 @@ public:
 	/****   Operators overflow	******/
 
 	/***********************************************************
-	 * @brief operator= group is similar of put() with StrEndSymbol='\0', 
+	 * @brief operator= group is similar of put(),
 	 * but with clear of buffer
 	************************************************************/
 	
@@ -176,7 +178,8 @@ public:
 	int operator=(const char byte);
 
 	/****************************************************
-	 * @brief	Put c_str with terminator in buffer.
+	 * @brief	Put c_str in buffer until the user EOF char
+	 * (if defined) or terminator is writes to buffer.
 	 * The buffer will be cleared before put.
 	 * If string starts with 0 - not copy.
 	 * If function return bufResultNG, the buffer returns
@@ -188,7 +191,8 @@ public:
 	int operator=(const char* str);
 
 	/****************************************************
-	 * @brief	Put std::strind in buffer.
+	 * @brief	Put std::string in buffer until the user EOF char
+	 * (if defined) or terminator is writes to buffer.
 	 * The buffer will be cleared before put.
 	 * If string starts with 0 - not copy.
 	 * If function return bufResultNG, the buffer returns
@@ -206,7 +210,7 @@ public:
 	Buffer& operator=(const Buffer& buf) = delete;
 
 	/***********************************************************
-	* @brief operator+= group is similar of put() with StrEndSymbol='\0'
+	* @brief operator+= group is similar of put()
 	************************************************************/
 
 	/****************************************************
@@ -218,20 +222,26 @@ public:
 	int operator+=(const char byte);
 
 	/****************************************************
-	* @brief	Put c_str in buffer.
-	* If string starts with 0 - not copy.
-	* @param str <const char*> - input string
-	* @return next index of buffer for write operation
-			or bufResultNG, if buffer is full
+	 * @brief	Put c_str in buffer until the user EOF char
+	 * (if defined) or terminator is writes to buffer.
+	 * If string starts with 0 - not copy.
+	 * If function return bufResultNG, the buffer returns
+	 * to previous state.
+	 * @param str <const char*> - input c_style string
+	 * @return next index of buffer for write operation
+				or bufResultNG, if buffer is full
 	*****************************************************/
 	int operator+=(const char* str);
 
 	/****************************************************
-	* @brief	Put std::string in buffer.
-	* If string starts with 0 - not copy.
-	* @param str <std::string> - input string
-	* @return next index of buffer for write operation
-			or bufResultNG, if buffer is full
+	 * @brief	Put std::string in buffer until the user EOF char
+	 * (if defined) or terminator is writes to buffer.
+	 * If string starts with 0 - not copy.
+	 * If function return bufResultNG, the buffer returns
+	 * to previous state.
+	 * @param str <std::string> - input string
+	 * @return next index of buffer for write operation
+				or bufResultNG, if buffer is full
 	*****************************************************/
 	int operator+=(std::string& str);
 
@@ -257,14 +267,36 @@ public:
 	 * @brief	Search c_style string in buffer in not readed range.
 	 * Buffer's indexes don't change.
 	 * @param str <const char* str> - string for search
+	 * @param pStartInBuf <int> - start index for search. If 0 or not defined - the seach begins
+	 *		with index for read operation
 	 * @param isReturnIndAfterStr <bool>:
 	 *		if = false or not defined - the function return index in buffer where found start of input string 
 	 *		if = true - the function return next index in buffer where found end of input string
-	 * @param pStartInBuf <int> - start index for search. If 0 or not defined - the seach begins
-	 *		with index for read operation
 	 * @return <int> - index of buffer or bufResultNG if not found
 	*****************************************************/
-	int search(const char* str, bool isReturnIndAfterStr = false, int pStartInBuf = 0 );
+	int search(const char* str, int pStartInBuf = 0, bool isReturnIndAfterStr = false);
+
+	/*****************************************************
+	 * @brief Copy to another buffer until the user EOF char
+	 * (if defined) or terminator is writes to destination.
+	 * @param dstBuf <Buffer> - buffer of receiver
+	 * @return	true - Copy success
+	 *					false - the EOF char not found in buffer of 
+	 *						source while copy operation. All buffers 
+	 *						will be return to previous state
+	******************************************************/
+	bool copyStrTo(Buffer& dstBuf);
+
+	/*****************************************************
+	 * @brief Transfer to another buffer until the user EOF char
+	 * (if defined) or terminator is writes to destination.
+	 * @param dstBuf <Buffer> - buffer of receiver
+	 * @return	true - Transfer success
+	 *					false - the EOF char not found in buffer of
+	 *						source while copy operation. All buffers
+	 *						will be return to previous state
+	******************************************************/
+	bool transferStrTo(Buffer& dstBuf);
 
 
 	/****************************************************
@@ -278,80 +310,33 @@ protected:
 	/***************************************************/
 private:
 
-	//Переменная состояния буфера
-	typedef enum BUF_STATE_ENUM
-	{
-		EMPTY,	//пустой
-		NORMAL,	//нормальная работа буфера без переполнения
-		OVF		//буфер полностью забит
-	}BUF_STATE_ENUM;
-
-	BUF_STATE_ENUM volatile m_state = EMPTY;  //Переменная состояния буфера
-	//указывает на свободную ячейку после записи в буфер
-	//изменяется после каждой записи в буфер
+	//pointer for next write operation in buffer
 	int volatile m_front = 0;
-	//указывает на первый байт кот. нужно считать (необработанные данные)
-	//изменяется при считывании с буфера
+	//pointer for next read operation from buffer
 	int volatile m_end = 0;
-	//длина занятой области. Считается в программе bufCalcLength
+	// leng of data occupied area
 	int volatile m_len = 0;
-	//максимальная длина занятой области. для анализа заполнения буфера
+	// maximum leng of data occupied area
 	int volatile m_maxLen = 0;
-	int m_size = 0;						// размер буфера ( для ф-й bufClear и bufCalcLength ) т.к. sizeof(Buf)=2
-	char* m_data = nullptr;		// массив данных буфера
-	bool isDynamic_m_data = false;	// =1 - память была выделена динамически
+	// size of buffer
+	int m_size = 0;						// size of buffer
+	char* m_data = nullptr;		// pointer to data area (may be dynamically or external)
+	bool isDynamic_m_data = false;	// =1 - the memory for buffer has been allocated dynamically
+
 	/**********   Functions   ************/
 	/***************************************************************/
-	// Полной очистка буфера с инициализацией нулями. Указатели буфера - на начало.
+	// Full clear buffer with wrute 0 in data area and return buffer's 
+	// pointers to the beginning
 	void clear();
 	/***************************************************************/
-	// Необходимо применять при прыжках по буферу, например после изменеия указателей буфера
-	// Подсчет разницы между указателями end и front, формирование флагов буфера
+	// Calculation parameters of buffer as length. Must be call after 
+	// change pointer of buffer, like call setIndexForRead()
 	void calcLength();
 };
 
 
 
 
-/********************************************************
-* Копирование с одного буфера в другой до указанного символа
-* (не переписывается). Завершает строку \r\n в приемнике, если надо
-* Вход:	*srcBufFl - буфер источника
-* 			*dstBufFl - буфер приеммника
-*				u08 symbol - до этого символа переписываем
-*				u08 newStrFl - !=0 -вставляем в конец символ "\r\n"
-* Выход: 	HAL_OK (0) - копирвоание успешно
-*					HAL_ERROR (1) - копирвоание не успешно. Указатели буферов возвращены в исх.
-*********************************************************/
-/*u08 bufCopy(BUFFER_STRUCT* srcBufFl, BUFFER_STRUCT* dstBufFl, u08 symbol, u08 newStrFl)
-{
-	u16 end = srcBufFl->End;
-	u16 front = dstBufFl->Front;
-	while (srcBufFl->Data[srcBufFl->End] != symbol) {
-		if (srcBufFl->State != Empty) {
-			bufPutByte(dstBufFl, bufGetByte(srcBufFl));
-		}
-		else if (dstBufFl->State == Overflow) {
-			// ошибка копирования. не дошли до symbol, а буфер уже пустой
-			// или переполнение приемника.
-			// возврат указателей, выход с ошибкой
-			srcBufFl->End = end;
-			dstBufFl->Front = front;
-			bufCalcLength(srcBufFl);
-			bufCalcLength(dstBufFl);
-			return HAL_ERROR;
-		}
-	}
-	if (newStrFl) { bufPutNewStr(dstBufFl); }
-	if (dstBufFl->State == Overflow) {
-		srcBufFl->End = end;
-		dstBufFl->Front = front;
-		bufCalcLength(srcBufFl);
-		bufCalcLength(dstBufFl);
-		return HAL_ERROR;
-	}
-	return HAL_OK;
-}
 
 /********************************************************
 * Поиск символа в буфере с выборкой из буфера

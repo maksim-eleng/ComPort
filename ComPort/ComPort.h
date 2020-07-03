@@ -36,7 +36,7 @@ public:
 	 * @param sizeTxBuf:<int> - size of Tx buffer. If not set - MIN_BUFFER_SIZE
 	************************************************************/
 	ComPort(char* const pRxBuf, char* const pTxBuf,
-		int sizeRxBuf = MIN_BUFFER_SIZE, int sizeTxBuf = MIN_BUFFER_SIZE);
+		int sizeRxBuf = MIN_BUF_SIZE, int sizeTxBuf = MIN_BUF_SIZE);
 
 	/***********************************************************
 	 * @brief Delete ComPort object.
@@ -45,16 +45,13 @@ public:
 	~ComPort();
 	
 	/************************************************
-	* @brief Print to port c_style string without terminator.
+	* @brief Print to port c_style string until the user EOF char 
+	* (if defined) or terminator is writed to buffer.( ifwithout terminator.
 	* If you want send string with terminator - use print(str, true)
 	* @param cstr	<const char*> - c_style string
 	* @return	<ComPort&> for use as com<<"ddd"<<"sss";
 	***********************************************/
-	ComPort& operator<<(const char* cstr)
-	{
-		print(cstr);
-		return *this;
-	}
+	ComPort& operator<<(const char* cstr);
 
 	/************************************************
 	* @brief Print to port integer.
@@ -73,6 +70,17 @@ public:
 	**************************************************************/
 	int getRxStr( char* str, int size);
 
+	bool redirectStrTo(ComPort& dstCom, bool fTransfer = true) {
+		bool res;
+		if (fTransfer)
+			res = m_rxBuf.transferStrTo(dstCom.m_txBuf);
+		else
+			res = m_rxBuf.copyStrTo(dstCom.m_txBuf);
+		if (res)
+			startTx();
+		return res;
+	}
+
 	/**********************************************
 	* @brief	Add observer for event  to another objects.
 	* @param ref <IObserverComPort&> - object that inherits IObsComPort
@@ -86,14 +94,24 @@ public:
 	void removeObserver(IObsComPort& obs);
 
 	/************************************************
-	 * @brief Print to port c_style string
+	 * @brief Print to port c_style string. The terminator will be send if 
+	 * event char was set in '\0' value where port was configured. 
 	 * @param cstr	<const char*> - c_style string
-	 * @param endSymbol <char> - end symbol of string. End symbol'\0' not transmitting
 	 * @return	true - OK
-	 *					false - not ok. Inthis case EVT_ERR_CRITICAL, EVT_ERR_TX events may be 
-										transmit to observers
+	 *					false - not ok. In this case EVT_ERR_CRITICAL, EVT_ERR_TX events may be 
+								transmit to observers
 	***********************************************/
-	bool print(const char* cstr, bool fTxEndStr = false);
+	bool print(const char* cstr);
+
+	/************************************************
+	 * @brief Print to port std::string. The terminator will be send if
+	 * event char was set in '\0' value where port was configured.
+	 * @param cstr	<const char*> - std::string
+	 * @return	true - OK
+	 *					false - not ok. In this case EVT_ERR_CRITICAL, EVT_ERR_TX events may be
+								transmit to observers
+	***********************************************/
+	bool print(std::string str);
 
 	/****************************************************
 	 * @brief	Search symbol in Rx buffer in not readed range.
