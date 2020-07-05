@@ -45,23 +45,48 @@ public:
 	~ComPort();
 	
 	/************************************************
-	* @brief Print to port c_style string until the user EOF char 
-	* (if defined) or terminator is writed to buffer.( ifwithout terminator.
-	* If you want send string with terminator - use print(str, true)
+	* @brief Print to port c_style string while EOF char 
+	* not will be printed
 	* @param cstr	<const char*> - c_style string
 	* @return	<ComPort&> for use as com<<"ddd"<<"sss";
 	***********************************************/
 	ComPort& operator<<(const char* cstr);
 
 	/************************************************
-	* @brief Print to port integer.
+	* @brief Print to port integer number string while 
+	* EOF char not will be printed
 	* @param num	<const int> - integer
 	* @return	<ComPort&> for use as com<<"ddd"<<"sss";
 	***********************************************/
 	ComPort& operator<<(const int num);
 
+	/************************************************
+	* @brief Print to port c_style string while EOF char
+	* not will be printed
+	* @param cstr	<const char*> - c_style string
+	* @return	true - OK
+	*					false - not ok. In this case EVT_ERR_CRITICAL, EVT_ERR_TX events may be
+							transmit to observers
+	***********************************************/
+	bool print(const char* cstr);
+
+	/************************************************
+ * @brief Print to port std::string. The terminator will be send if
+ * event char was set in '\0' value where port was configured.
+ * @param cstr	<const char*> - std::string
+ * @return	true - OK
+ *					false - not ok. In this case EVT_ERR_CRITICAL, EVT_ERR_TX events may be
+							transmit to observers
+***********************************************/
+	bool print(std::string str);
+
 	/**************************************************************
-	 * @brief	Get string of c_style format from Rx buffer.
+	 * @brief	Get string from Rx buffer to external buffer while 
+	 * EOF user char not will be copied to out str. Out str allways 
+	 * end with '\0'
+	 * If data in buffer starts with '\0' - not copy.
+	 * If function complete with error, the Rx buffer returns
+	 * to previous state.
 	 * @param str <char*> - external buffer for destination.
 	 * @param sizeStr <int> - size of external buffer
 	 * @return next buffer's index for read operation
@@ -93,25 +118,7 @@ public:
 	***********************************************/
 	void removeObserver(IObsComPort& obs);
 
-	/************************************************
-	 * @brief Print to port c_style string. The terminator will be send if 
-	 * event char was set in '\0' value where port was configured. 
-	 * @param cstr	<const char*> - c_style string
-	 * @return	true - OK
-	 *					false - not ok. In this case EVT_ERR_CRITICAL, EVT_ERR_TX events may be 
-								transmit to observers
-	***********************************************/
-	bool print(const char* cstr);
 
-	/************************************************
-	 * @brief Print to port std::string. The terminator will be send if
-	 * event char was set in '\0' value where port was configured.
-	 * @param cstr	<const char*> - std::string
-	 * @return	true - OK
-	 *					false - not ok. In this case EVT_ERR_CRITICAL, EVT_ERR_TX events may be
-								transmit to observers
-	***********************************************/
-	bool print(std::string str);
 
 	/****************************************************
 	 * @brief	Search symbol in Rx buffer in not readed range.

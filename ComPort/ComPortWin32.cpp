@@ -451,7 +451,7 @@ ComPortWin32::comEvtMsk_t ComPortWin32::startTx()
 
   int index = m_txBuf.getIndexForRead();
  
-  while (index != m_txBuf.getIndexForWrite())
+  while (index != m_txBuf.getIndexForWrite()) // don't use < for cyclical buffer
   {
     // buffering data
     char data;

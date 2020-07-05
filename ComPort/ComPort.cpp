@@ -30,9 +30,42 @@ ComPort& ComPort::operator<<(const int num)
 }
 
 /**************************************************************/
+bool ComPort::print(const char* cstr)
+{
+	comEvtMsk_t evt = EVT_NO;
+	if (!isPortOpened()) {
+		setEvent(evt, EVT_ERR_CRITICAL);
+	}
+	if (EVT_NO == evt) {
+		int res;
+		bool fPutTerm = false;
+		res = m_txBuf.put(cstr, m_cfg.evtChar);
+		if (bufResultNG == res) {
+			setEvent(evt, EVT_ERR_TX);
+		}
+		else {
+			evt = startTx();
+		}
+	}
+	if (EVT_NO != evt) {
+		notifyObservers(evt);
+		return false;
+	}
+	return true;
+}
+
+/**************************************************************/
+bool ComPort::print(std::string str)
+{
+	return print(str.c_str());
+}
+
+
+
+/**************************************************************/
 int ComPort::getRxStr( char* str, int size)
 {
-  return m_rxBuf.get( str, size);
+  return m_rxBuf.get(str, size, m_cfg.evtChar);
 }
 
 /***********************************************/
@@ -58,38 +91,6 @@ void ComPort::notifyObservers(comEvtMsk_t evtMask)
   for (auto& observer : m_observers) {
     observer->handleEvent(*this, evtMask);
   }
-}
-
-/**************************************************************/
-bool ComPort::print(const char* cstr)
-{
-	comEvtMsk_t evt = EVT_NO;
-	if (!isPortOpened()) {
-		setEvent(evt, EVT_ERR_CRITICAL);
-	}
-	if (EVT_NO == evt) {
-		int res;
-		bool fPutTerm = false;
-		if(m_cfg.evtChar == '\0')
-			fPutTerm = true;
-		res = m_txBuf.put(cstr, fPutTerm);
-		if (bufResultNG == res) {
-			setEvent(evt, EVT_ERR_TX);
-		}
-		else {
-			evt = startTx();
-		}
-	}
-	if (EVT_NO != evt) {
-		notifyObservers(evt);
-		return false;
-	}
-	return true;
-}
-
-bool ComPort::print(std::string str)
-{
-	return print(str.c_str());
 }
 
 /**************************************************************/

@@ -67,7 +67,7 @@ int main(int argc, char* argv[])
 			evt.handleEvent(com, events);
 		}
 		else {
-			com << "Start of system.\n" << "ComPort №" << com.getPortNumber() << " was opened. Baud rate: " \
+			com << "Start.\n" << "Port №" << com.getPortNumber() << " was opened. Baud rate: " \
 				<< com.getBaud() << "\n";
 		}
 	}

@@ -10,6 +10,13 @@
 #include <stdint.h>
 #include <string>
 
+// uncomment for use cyclical type of buffer
+//#define BUF_TYPE_CYCLICAL
+
+#ifndef BUF_TYPE_CYCLICAL
+#define BUF_TYPE_LINEAR
+#endif
+
 #define bufResultNG			-1
 #define BUF_NOT_CFG			-1
 
@@ -57,28 +64,34 @@ public:
 	int put(const char byte);
 
 	/****************************************************
-	 * @brief	Put c_str in buffer without terminator or with. 
-	 * If string starts with 0 - not copy.
-	 * If function return bufResultNG, the buffer returns 
+	 * @brief	Put string to buffer from external buffer while EOF not
+	 * will be copied to buffer or terminator not detected in input str
+	 * (terminator not copying, if not equal of EOF char)
+	 * If data in input str starts with '\0' - not copy.
+	 * If function complete with error, the buffer returns
 	 * to previous state.
-	 * @param str <const char*> - input c_style string
-	 * @param fPutTerminator <bool> = true - put str + terminator
-	 * @return next index of buffer for write operation
-				or bufResultNG, if buffer is full
+	 * @param str <char*> - external buffer for copy to buffer.
+	 * @param eofChar <char> - EOF char
+	 * @return next buffer's index for read operation
+	 *						or 	bufResultIsNG - terminator not
+	 *						found before buffer is empty
 	*****************************************************/
-	int put(const char* str, bool fPutTerminator = false);
+	int put(const char* str, char eofChar = '\0');
 
 	/****************************************************
-	 * @brief	Put std::string in buffer without terminator or with.
-	 * If string starts with 0 - not copy.
-	 * If function return bufResultNG, the buffer returns
+	 * @brief	Put string to buffer from external std::string while EOF not
+	 * will be copied to buffer or terminator not detected in input str
+	 * (terminator not copying, if not equal of EOF char)
+	 * If data in input str starts with '\0' - not copy.
+	 * If function complete with error, the buffer returns
 	 * to previous state.
-	 * @param str <std::string> - input string
-	 * @param fPutTerminator <bool> = true - put str + terminator
-	 * @return next index of buffer for write operation
-				or bufResultNG, if buffer is full
+	 * @param str <std::string> - external std::string for copy to buffer.
+	 * @param eofChar <char> - EOF char
+	 * @return next buffer's index for read operation
+	 *						or 	bufResultIsNG - terminator not
+	 *						found before buffer is empty
 	*****************************************************/
-	int put(std::string& str, bool fPutTerminator = false);
+	int put(std::string& str, char eofChar = '\0');
 
 	/****************************************************
 	 * @brief	Get byte from buffer, if buffer is not empty
@@ -95,7 +108,9 @@ public:
 	char get(int& index);
 
 	/****************************************************
-	 * @brief	Get string in c_style format from buffer. 
+	 * @brief	Get string from buffer to external buffer while EOF not
+	 * will be copied to out str or terminator not detected in buffer 
+	 * (terminator not copying, if not equal of EOF char)
 	 * If data in buffer starts with '\0' - not copy.
 	 * If function complete with error, the buffer returns
 	 * to previous state.
@@ -105,10 +120,12 @@ public:
 	 *						or 	bufResultIsNG - terminator not 
 	 *						found before buffer is empty
 	*****************************************************/
-	int get(char* str, int sizeStr);
+	int get(char* str, int sizeStr, char eofChar = '\0');
 
 	/****************************************************
-	 * @brief	Get std::string from buffer.
+	 * @brief	Get string from std::string to external buffer while EOF not
+	 * will be copied to out str or terminator not detected in buffer
+	 * (terminator not copying, if not equal of EOF char)
 	 * If data in buffer starts with '\0' - not copy.
 	 * If function complete with error, the buffer returns
 	 * to previous state.
@@ -117,7 +134,7 @@ public:
 	 *						or 	bufResultIsNG - terminator not
 	 *						found before buffer is empty
 	*****************************************************/
-	int get(std::string& str);
+	int get(std::string& str, char eofChar = '\0');
 
 	/****************************************************
 	 * @brief Get size of buffer.
@@ -178,28 +195,34 @@ public:
 	int operator=(const char byte);
 
 	/****************************************************
-	 * @brief	Put c_str in buffer until the user EOF char
-	 * (if defined) or terminator is writes to buffer.
+	 * @brief	Put string to buffer from external buffer while EOF not
+	 * will be copied to buffer or terminator not detected in input str
+	 * (terminator not copying, if not equal of EOF char)
 	 * The buffer will be cleared before put.
-	 * If string starts with 0 - not copy.
-	 * If function return bufResultNG, the buffer returns
+	 * If data in input str starts with '\0' - not copy.
+	 * If function complete with error, the buffer returns
 	 * to previous state.
-	 * @param str <const char*> - input c_style string
-	 * @return next index of buffer for write operation
-				or bufResultNG, if buffer is full
+	 * @param str <char*> - external buffer for copy to buffer.
+	 * @param eofChar <char> - EOF char
+	 * @return next buffer's index for read operation
+	 *						or 	bufResultIsNG - terminator not
+	 *						found before buffer is empty
 	*****************************************************/
 	int operator=(const char* str);
 
 	/****************************************************
-	 * @brief	Put std::string in buffer until the user EOF char
-	 * (if defined) or terminator is writes to buffer.
+	 * @brief	Put string to buffer from external std::string while EOF not
+	 * will be copied to buffer or terminator not detected in input str
+	 * (terminator not copying, if not equal of EOF char)
 	 * The buffer will be cleared before put.
-	 * If string starts with 0 - not copy.
-	 * If function return bufResultNG, the buffer returns
+	 * If data in input str starts with '\0' - not copy.
+	 * If function complete with error, the buffer returns
 	 * to previous state.
-	 * @param str <std::string> - input string
-	 * @return next index of buffer for write operation
-				or bufResultNG, if buffer is full
+	 * @param str <std::string> - external std::string for copy to buffer.
+	 * @param eofChar <char> - EOF char
+	 * @return next buffer's index for read operation
+	 *						or 	bufResultIsNG - terminator not
+	 *						found before buffer is empty
 	*****************************************************/
 	int operator=(std::string& str);
 
@@ -222,26 +245,33 @@ public:
 	int operator+=(const char byte);
 
 	/****************************************************
-	 * @brief	Put c_str in buffer until the user EOF char
-	 * (if defined) or terminator is writes to buffer.
-	 * If string starts with 0 - not copy.
-	 * If function return bufResultNG, the buffer returns
+	 * @brief	Put string to buffer from external buffer while EOF not
+	 * will be copied to buffer or terminator not detected in input str
+	 * (terminator not copying, if not equal of EOF char)
+	 * The buffer will be cleared before put.
+	 * If data in input str starts with '\0' - not copy.
+	 * If function complete with error, the buffer returns
 	 * to previous state.
-	 * @param str <const char*> - input c_style string
-	 * @return next index of buffer for write operation
-				or bufResultNG, if buffer is full
+	 * @param str <char*> - external buffer for copy to buffer.
+	 * @param eofChar <char> - EOF char
+	 * @return next buffer's index for read operation
+	 *						or 	bufResultIsNG - terminator not
+	 *						found before buffer is empty
 	*****************************************************/
 	int operator+=(const char* str);
 
 	/****************************************************
-	 * @brief	Put std::string in buffer until the user EOF char
-	 * (if defined) or terminator is writes to buffer.
-	 * If string starts with 0 - not copy.
-	 * If function return bufResultNG, the buffer returns
+	 * @brief	Put string to buffer from external std::string while EOF not
+	 * will be copied to buffer or terminator not detected in input str
+	 * (terminator not copying, if not equal of EOF char)
+	 * If data in input str starts with '\0' - not copy.
+	 * If function complete with error, the buffer returns
 	 * to previous state.
-	 * @param str <std::string> - input string
-	 * @return next index of buffer for write operation
-				or bufResultNG, if buffer is full
+	 * @param str <std::string> - external std::string for copy to buffer.
+	 * @param eofChar <char> - EOF char
+	 * @return next buffer's index for read operation
+	 *						or 	bufResultIsNG - terminator not
+	 *						found before buffer is empty
 	*****************************************************/
 	int operator+=(std::string& str);
 
@@ -277,26 +307,36 @@ public:
 	int search(const char* str, int pStartInBuf = 0, bool isReturnIndAfterStr = false);
 
 	/*****************************************************
-	 * @brief Copy to another buffer until the user EOF char
-	 * (if defined) or terminator is writes to destination.
+	 * @brief	Copy to another buffer while EOF not will be copied 
+	 * to destination buffer or terminator not detected in source buffer
+	 * (terminator not copying, if not equal of EOF char)
+	 * If data in sourse buffer starts with '\0' - not copy.
+	 * If function complete with error, the buffer returns
+	 * to previous state.
 	 * @param dstBuf <Buffer> - buffer of receiver
+	 * @param eofChar <char> - EOF char
 	 * @return	true - Copy success
-	 *					false - the EOF char not found in buffer of 
-	 *						source while copy operation. All buffers 
-	 *						will be return to previous state
-	******************************************************/
-	bool copyStrTo(Buffer& dstBuf);
-
-	/*****************************************************
-	 * @brief Transfer to another buffer until the user EOF char
-	 * (if defined) or terminator is writes to destination.
-	 * @param dstBuf <Buffer> - buffer of receiver
-	 * @return	true - Transfer success
 	 *					false - the EOF char not found in buffer of
 	 *						source while copy operation. All buffers
 	 *						will be return to previous state
 	******************************************************/
-	bool transferStrTo(Buffer& dstBuf);
+	bool copyStrTo(Buffer& dstBuf, char eofChar = '\0');
+
+	/*****************************************************
+	 * @brief	Transfer to another buffer while EOF not will be copied
+	 * to destination buffer or terminator not detected in source buffer
+	 * (terminator not copying, if not equal of EOF char)
+	 * If data in sourse buffer starts with '\0' - not copy.
+	 * If function complete with error, the buffer returns
+	 * to previous state.
+	 * @param dstBuf <Buffer> - buffer of receiver
+	 * @param eofChar <char> - EOF char
+	 * @return	true - Copy success
+	 *					false - the EOF char not found in buffer of
+	 *						source while copy operation. All buffers
+	 *						will be return to previous state
+	******************************************************/
+	bool transferStrTo(Buffer& dstBuf, char eofChar = '\0');
 
 
 	/****************************************************
@@ -314,10 +354,10 @@ private:
 	int volatile m_front = 0;
 	//pointer for next read operation from buffer
 	int volatile m_end = 0;
+	#ifdef BUF_TYPE_CYCLICAL
 	// leng of data occupied area
 	int volatile m_len = 0;
-	// maximum leng of data occupied area
-	int volatile m_maxLen = 0;
+	#endif
 	// size of buffer
 	int m_size = 0;						// size of buffer
 	char* m_data = nullptr;		// pointer to data area (may be dynamically or external)
@@ -332,30 +372,15 @@ private:
 	// Calculation parameters of buffer as length. Must be call after 
 	// change pointer of buffer, like call setIndexForRead()
 	void calcLength();
+
+	/*****************************************************************
+	 * @brief Transfer not readed path in buffer to start of buffer
+	 (for linear buffer only)
+	****************************************************************/
+	#ifdef BUF_TYPE_LINEAR
+	void transferOnBeginOfBuffer();
+	#endif
 };
-
-
-
-
-
-/********************************************************
-* Поиск символа в буфере с выборкой из буфера
-* Вход:	BUFFER_STRUCT *BufFl - буфер где ищем
-* 			u08 Byte - что ищем
-* Выход:	res = Byte - символ найден
-* 				res = 0xFF - символ не найден и буфер пустой
-* 				BufFl->End на выходе указывает на байт за найденным
-*********************************************************/
-/*u08 bufSearchByte(BUFFER_STRUCT* BufFl, u08 Byte)
-{
-	u08 res = 0;
-	while ((res = bufGetByte(BufFl)) != Byte && res != 0xFF);
-	return res;
-}
-
-
-
-
 
 /************************ (C) **END OF FILE****/
 
