@@ -153,6 +153,7 @@
     <ClCompile Include="ComPortWin32.cpp" />
     <ClCompile Include="EventSystem.cpp" />
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="Nmea.cpp" />
     <ClCompile Include="TimeBase.cpp" />
     <ClCompile Include="utility.cpp" />
   </ItemGroup>
@@ -161,6 +162,7 @@
     <ClInclude Include="ComPort.h" />
     <ClInclude Include="ComPortWin32.h" />
     <ClInclude Include="EventSystem.h" />
+    <ClInclude Include="Nmea.h" />
     <ClInclude Include="sysConst.h" />
     <ClInclude Include="TimeBase.h" />
     <ClInclude Include="TimeBaseWin32.h" />

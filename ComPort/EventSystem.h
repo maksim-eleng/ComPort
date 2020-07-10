@@ -1,5 +1,6 @@
 #pragma once
 #include "ComPort.h"
+#include "TimeBase.h"
 
 
 
@@ -13,4 +14,5 @@ public:
 	virtual void handleEvent(ComPort& com, comEvtMsk_t evtMask) override;
 
 };
+
 

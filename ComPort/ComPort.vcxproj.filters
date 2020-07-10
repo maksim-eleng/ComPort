@@ -36,6 +36,9 @@
     <ClCompile Include="utility.cpp">
       <Filter>Исходные файлы</Filter>
     </ClCompile>
+    <ClCompile Include="Nmea.cpp">
+      <Filter>Исходные файлы</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Buffer.h">
@@ -60,6 +63,9 @@
       <Filter>Файлы заголовков</Filter>
     </ClInclude>
     <ClInclude Include="utility.h">
+      <Filter>Файлы заголовков</Filter>
+    </ClInclude>
+    <ClInclude Include="Nmea.h">
       <Filter>Файлы заголовков</Filter>
     </ClInclude>
   </ItemGroup>

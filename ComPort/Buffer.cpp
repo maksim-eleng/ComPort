@@ -87,9 +87,7 @@ int Buffer::put(const char* str, char eofChar)
 	if (eofChar == '\0' && str[i] == '\0')
 		res = put('\0');
 	if (res == bufResultNG) {
-		DISABLE_INTERRUPT;
-		m_front = ind;
-		ENABLE_INTERRUPT;
+		setIndexForWrite(ind);
 		return bufResultNG;
 	}
 	return m_front;
@@ -174,7 +172,7 @@ int Buffer::get(char* str, int sizeStr, char eofChar)
 	while (data == '\0') {
 		data = get();
 		if (data == bufResultNG) {
-			m_end = ind;
+			setIndexForRead(ind);
 			return bufResultNG;
 		}
 	}
@@ -185,10 +183,7 @@ int Buffer::get(char* str, int sizeStr, char eofChar)
 		data = get();
 		if (i == sizeStr || data == bufResultNG) {
 			str[i] = '\0';
-			m_end = ind;
-			#ifdef BUF_TYPE_CYCLICAL
-			calcLength();
-			#endif
+			setIndexForRead(ind);
 			return bufResultNG;
 		}
 		str[i] = data;
@@ -211,7 +206,7 @@ int Buffer::get(std::string& str, char eofChar)
 	while (data == '\0') {
 		data = get();
 		if (data == bufResultNG) {
-			m_end = ind;
+			setIndexForRead(ind);
 			return bufResultNG;
 		}
 	}
@@ -220,7 +215,7 @@ int Buffer::get(std::string& str, char eofChar)
 	while (data != eofChar && data != '\0') {
 		data = get();
 		if (data == bufResultNG) {
-			m_end = ind;
+			setIndexForRead(ind);
 			return bufResultNG;
 		}
 		str.push_back(data);
@@ -267,10 +262,12 @@ bool Buffer::checkIsEpty() const {
 void Buffer::setIndexForWrite(int newIndexForWrite)
 {
 	if (newIndexForWrite >= 0 && newIndexForWrite < m_size) {
+		DISABLE_INTERRUPT;
 		m_front = newIndexForWrite;
 		#ifdef BUF_TYPE_CYCLICAL
 		calcLength();
 		#endif
+		ENABLE_INTERRUPT;
 	}
 }
 
@@ -278,6 +275,7 @@ void Buffer::setIndexForWrite(int newIndexForWrite)
 void Buffer::setIndexForRead(int newIndexForRead)
 {
 	if (newIndexForRead >= 0 && newIndexForRead < m_size) {
+		DISABLE_INTERRUPT;
 		#ifdef BUF_TYPE_LINEAR
 		m_end = newIndexForRead;
 		transferOnBeginOfBuffer();
@@ -286,6 +284,7 @@ void Buffer::setIndexForRead(int newIndexForRead)
 		m_end = newIndexForRead;
 		calcLength();
 		#endif
+		ENABLE_INTERRUPT;
 	}
 }
 

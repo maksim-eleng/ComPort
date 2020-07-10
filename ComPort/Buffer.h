@@ -330,7 +330,7 @@ public:
 	 * If function complete with error, the buffer returns
 	 * to previous state.
 	 * @param dstBuf <Buffer> - buffer of receiver
-	 * @param eofChar <char> - EOF char
+	 * @param eofChar <char> - EOF char of sourse
 	 * @return	true - Copy success
 	 *					false - the EOF char not found in buffer of
 	 *						source while copy operation. All buffers

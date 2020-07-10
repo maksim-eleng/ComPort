@@ -3,6 +3,7 @@
 
 extern ComPort com;
 
+/**************************************************************/
 void EventSystem::handleEvent(TimeBase& ref, TimeBase::evtMask_t evtMsk)
 {
 	if (evtMsk & EVT_1S) {
@@ -13,6 +14,7 @@ void EventSystem::handleEvent(TimeBase& ref, TimeBase::evtMask_t evtMsk)
 	}
 }
 
+/**************************************************************/
 void EventSystem::handleEvent(ComPort& com, comEvtMsk_t evtMask)
 {
 	// 

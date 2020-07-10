@@ -23,8 +23,10 @@ int main(int argc, char* argv[])
 	EventSystem evt;
 
 	sysClk.addObserver(evt, EVT_1S);
-	sysClk.addObserver(com, EVT_10MS);
+//	sysClk.addObserver(com, EVT_10MS);
 	com.addObserver(evt);
+
+	com.subscribe(sysClk, EVT_10MS);
 	
 	{
 		int comNum = 0;

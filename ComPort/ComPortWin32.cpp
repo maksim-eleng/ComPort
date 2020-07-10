@@ -115,6 +115,7 @@ ComPortWin32::comEvtMsk_t ComPortWin32::setParam(ComPortWin32::comCfg_t& ref)
     set.stopBits  == SBIT_NOT_CFG ||
     set.parity    == P_NOT_CFG ||
     set.evtSet    == EVTSET_NOT_SET ||
+    set.evtChar   == COM_NOT_CFG ||
     ( set.byteSize < 4 || set.byteSize > 8) ||
     (set.parityChar != COM_NOT_CFG && (set.parity == P_NOT_CFG || set.parity == P_NO)) )  {
     setEvent(evt, EVT_ERR_INVALID_PARAM);

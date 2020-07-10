@@ -68,6 +68,19 @@ int ComPort::getRxStr( char* str, int size)
   return m_rxBuf.get(str, size, m_cfg.evtChar);
 }
 
+/**************************************************************/
+bool ComPort::redirectStrTo(ComPort& dstCom, bool fTransfer)
+{
+	bool res;
+	if (fTransfer)
+		res = m_rxBuf.transferStrTo(dstCom.m_txBuf, m_cfg.evtChar);
+	else
+		res = m_rxBuf.copyStrTo(dstCom.m_txBuf, m_cfg.evtChar);
+	if (res)
+		startTx();
+	return res;
+}
+
 /***********************************************/
 void ComPort::addObserver(IObsComPort & obs)
 {
@@ -100,9 +113,9 @@ int ComPort::searchInRxBuf(char byte)
 }
 
 /**************************************************************/
-int ComPort::searchInRxBuf(const char* str, bool isReturnIndAfterStr, int pStartInBuf)
+int ComPort::searchInRxBuf(const char* str, int pStartInBuf, bool isReturnIndAfterStr)
 {
-	return m_rxBuf.search(str, isReturnIndAfterStr, pStartInBuf);
+	return m_rxBuf.search(str, pStartInBuf, isReturnIndAfterStr);
 }
 
 /**************************************************************/
