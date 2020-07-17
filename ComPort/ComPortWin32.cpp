@@ -42,9 +42,13 @@ ComPortWin32::comEvtMsk_t ComPortWin32::setParam(ComPortWin32::comCfg_t& ref)
   dcb.fAbortOnError = false;
 
   // Configure temporarry variabes if input parameter is not default value
+  // Baud rate & Number of port are sets in cfg when port is opened
   if (ref.baud != B_NOT_CFG) {
     set.baud = ref.baud;
     dcb.BaudRate = ref.baud;
+  }
+  else {
+    dcb.BaudRate = set.baud;
   }
   if (ref.number != COM_NOT_CFG) {
     set.number = ref.number;
@@ -110,6 +114,7 @@ ComPortWin32::comEvtMsk_t ComPortWin32::setParam(ComPortWin32::comCfg_t& ref)
   // 1. Minimal parameters of port must be set
   // 2. byteSize = 4...8
   // 3. if parity char was set - parity type must be set too
+  // 4. pSysClk != null
   if ((set.baud   == B_NOT_CFG) || 
     set.number    == COM_NOT_CFG ||
     set.stopBits  == SBIT_NOT_CFG ||
@@ -117,10 +122,10 @@ ComPortWin32::comEvtMsk_t ComPortWin32::setParam(ComPortWin32::comCfg_t& ref)
     set.evtSet    == EVTSET_NOT_SET ||
     set.evtChar   == COM_NOT_CFG ||
     ( set.byteSize < 4 || set.byteSize > 8) ||
-    (set.parityChar != COM_NOT_CFG && (set.parity == P_NOT_CFG || set.parity == P_NO)) )  {
+    (set.parityChar != COM_NOT_CFG && (set.parity == P_NOT_CFG || set.parity == P_NO)))
+  {
     setEvent(evt, EVT_ERR_INVALID_PARAM);
   }
-
 
   // DCB struct init if not port errors
   // if parameters are set correctly
@@ -151,13 +156,6 @@ ComPortWin32::comEvtMsk_t ComPortWin32::setParam(ComPortWin32::comCfg_t& ref)
   }
 
   return evt;
-}
-
-
-/***********************************************************/
-bool ComPortWin32::checkEvent(comEvtMsk_t& events, comEvtMsk_t mask) const
-{
-  return events & mask;
 }
 
 /***********************************************************/
@@ -302,17 +300,123 @@ int ComPortWin32::getBaud() const
   return m_cfg.baud;
 }
 
-
 /***********************************************************/
-ComPortWin32::ComPortWin32(char* const pRxBuf, char* const pTxBuf,
+ComPortWin32::ComPortWin32(TimeBase& sysClk, char* const pRxBuf, char* const pTxBuf,
   int sizeRxBuf, int sizeTxBuf)
   :m_rxBuf(pRxBuf, sizeRxBuf), m_txBuf(pTxBuf, sizeTxBuf)
-{}
+{
+  subscribe(sysClk, TimeBase::EVT_10MS);
+
+}
 
 /***********************************************************/
 ComPortWin32::~ComPortWin32()
 {
   close();
+  if (m_pSysClk) {
+    m_pSysClk->removeObserver(*this);
+  }
+}
+
+/******************************************************/
+void ComPortWin32::setEvent(comEvtMsk_t& events, comEvtMsk_t mask)
+{
+  uint32_t tmp = events;
+  events = (comEvtMsk_t)(tmp | mask);
+}
+
+/******************************************************/
+ComPortWin32::comEvtMsk_t ComPortWin32::startTx()
+{
+  if (!isPortOpened()) {
+    return EVT_ERR_CRITICAL;
+  }
+  if (m_txBuf.checkIsEpty()) {
+    return EVT_ERR_TX;
+  }
+
+  char buf[50];
+  DWORD dwRet;
+  DWORD err;
+  comEvtMsk_t evt = EVT_NO;
+  DWORD len = 0;
+  int cnt = 0;
+
+  int index = m_txBuf.getIndexForRead();
+
+  while (index != m_txBuf.getIndexForWrite()) // don't use < for cyclical buffer
+  {
+    // buffering data
+    char data;
+    len = 0;
+    // buffering data in buf
+    while (len < sizeof(buf))
+    {
+      data = m_txBuf.get(index);
+      if (data != bufResultNG) {
+        buf[len] = data;
+        ++len;
+      }
+      else {
+        break; // buffer is empty - go out from copy to buf
+      }
+    }//end copy to buf[]
+
+    // send to com
+    if (len) {
+      OVERLAPPED ovf = { 0 };
+      dwRet = WriteFile(m_hPort, buf, len, NULL, &ovf);
+      err = GetLastError();
+      // get len = writen bytes
+      len = 0;
+      if (!dwRet && (ERROR_IO_PENDING == err)) {
+        dwRet = GetOverlappedResult(m_hPort, &ovf, &len, true);
+        err = GetLastError();
+      }
+      // len - writen bytes, err=ERROR_IO_PENDING || ERROR_IO_INCOMPLETE - OK
+      if (!len || (err != ERROR_SUCCESS && err != ERROR_IO_PENDING && err != ERROR_IO_INCOMPLETE)) {
+        // error of last transmit. Break of operation
+        setEvent(evt, EVT_ERR_TX);
+        index = -1; // incorrect value for setIndexForRead() 
+        break;
+      }
+    }
+  }
+  // All ok - correction pointer in tx buffer
+  m_txBuf.setIndexForRead(index);
+  return evt;
+}
+
+/**************************************************************/
+bool ComPortWin32::print(const char* cstr)
+{
+  comEvtMsk_t evt = EVT_NO;
+  if (!isPortOpened()) {
+    setEvent(evt, EVT_ERR_CRITICAL);
+  }
+  if (EVT_NO == evt) {
+    int res;
+    bool fPutTerm = false;
+    res = m_txBuf.put(cstr, m_cfg.evtChar);
+    if (bufResultNG == res) {
+      setEvent(evt, EVT_ERR_TX);
+    }
+    else {
+      evt = startTx();
+    }
+  }
+  if (EVT_NO != evt) {
+    notifyObservers(evt);
+    return false;
+  }
+  return true;
+}
+
+/**************************************************************/
+bool ComPortWin32::subscribe(TimeBase& sysClk, TimeBase::tBaseEvtMsk_t evtMsk)
+{
+  m_pSysClk = &sysClk;
+  return sysClk.addObserver(*this, evtMsk);
 }
 
 /***********************************************************/
@@ -433,73 +537,14 @@ ComPortWin32::comEvtMsk_t ComPortWin32::checkCoreEvents()
   return events;
 }
 
-/******************************************************/
-ComPortWin32::comEvtMsk_t ComPortWin32::startTx()
+/**************************************************************/
+void ComPortWin32::handleEvent(TimeBase&, TimeBase::tBaseEvtMsk_t)
 {
-  if (!isPortOpened()) {
-    return EVT_ERR_CRITICAL;
+  ComPortWin32::comEvtMsk_t events;
+  events = checkCoreEvents();
+  if (events) {
+    notifyObservers(events);
   }
-  if (m_txBuf.checkIsEpty()) {
-    return EVT_ERR_TX;
-  }
-
-  char buf[50];
-  DWORD dwRet;
-  DWORD err;
-  comEvtMsk_t evt = EVT_NO;
-  DWORD len = 0;
-  int cnt = 0;
-
-  int index = m_txBuf.getIndexForRead();
- 
-  while (index != m_txBuf.getIndexForWrite()) // don't use < for cyclical buffer
-  {
-    // buffering data
-    char data;
-    len = 0;
-    // buffering data in buf
-    while (len < sizeof(buf))
-    {
-      data = m_txBuf.get(index);
-      if (data != bufResultNG) {
-        buf[len] = data;
-        ++len;
-      }
-      else {
-        break; // buffer is empty - go out from copy to buf
-      }
-    }//end copy to buf[]
-
-    // send to com
-    if (len) {
-      OVERLAPPED ovf = { 0 };
-      dwRet = WriteFile(m_hPort, buf, len, NULL, &ovf);
-      err = GetLastError();
-      // get len = writen bytes
-      len = 0;
-      if (!dwRet && (ERROR_IO_PENDING == err)) {
-        dwRet = GetOverlappedResult(m_hPort, &ovf, &len, true);
-        err = GetLastError();
-      }
-      // len - writen bytes, err=ERROR_IO_PENDING || ERROR_IO_INCOMPLETE - OK
-      if (!len || (err != ERROR_SUCCESS && err != ERROR_IO_PENDING && err != ERROR_IO_INCOMPLETE)) {
-        // error of last transmit. Break of operation
-        setEvent(evt, EVT_ERR_TX);
-        index = -1; // incorrect value for setIndexForRead() 
-        break;
-      }
-    }
-  }
-  // All ok - correction pointer in tx buffer
-  m_txBuf.setIndexForRead(index);
-  return evt;
-}
-
-/******************************************************/
-void ComPortWin32::setEvent(comEvtMsk_t& events, comEvtMsk_t mask)
-{
-  uint32_t tmp = events;
-  events = (comEvtMsk_t)(tmp | mask);
 }
 
 

@@ -23,34 +23,62 @@ class IObsTimeBase;
 ***************************************************************/
 class TimeBase : public TimeBase_t
 {
+	using tBaseEvtMskInt_t = uint8_t;
 
 public:
-	using evtMask_t = uint16_t;
 
 	// mask of events. 
-	#define	EVT_1US		(1<<0)
-	#define	EVT_10US	(1<<1)
-	#define	EVT_100US	(1<<2)
-	#define	EVT_1MS		(1<<3)
-	#define	EVT_10MS	(1<<4)
-	#define	EVT_100MS	(1<<5)
-	#define	EVT_1S		(1<<6)
+	typedef enum EVT_TIME__ENUM: tBaseEvtMskInt_t
+	{
+		EVT_NO,
+		EVT_1US		= (1 << 0),
+		EVT_10US	= (1 << 1),
+		EVT_100US	= (1 << 2),
+		EVT_1MS		= (1 << 3),
+		EVT_10MS	= (1 << 4),
+		EVT_100MS	= (1 << 5),
+		EVT_1S		= (1 << 6),
+		EVT_10S		= (1 << 7),
+	}tBaseEvtMsk_t;
+
+	// For Observer
+	typedef struct {
+		IObsTimeBase* pToObs;		// pointer to observer
+		tBaseEvtMsk_t evtMask;	// mask for generation event for this observer
+	}timeBaseObs_t;
+
 
 	/*******************************************************************
 	 * @brief Create object.
 	 * @param evtMask <evtMask_t> - sets for generation of time interval
 	 *				May be set as (EVT_1MS | EVT_10US).  The minimum period of 
-	 *				event must be > then SysConst::clkTimeBase
+	 *				event must be >= then SysConst::clkTimeBase
 	********************************************************************/
-	TimeBase(evtMask_t evtMask = EVT_1MS);
+	TimeBase(tBaseEvtMsk_t evtMask = EVT_1MS);
+
+	/******************************************************************
+	* @brief Add event mask for generate timer's events.
+	* @param evtMsk <tBaseEvtMsk_t> - mask of event. May be set as EVT_10US | EVT_10US
+	* @return	true - ok
+	*					false - desired mask < SysConst::clkTimeBase and can't be set
+	*******************************************************************/
+	bool addEvent(tBaseEvtMsk_t evtMsk);
+
+	/******************************************************************
+	* @brief Remove event mask for generate timer's events.
+	* @param evtMsk <tBaseEvtMsk_t> - mask of event for delete. May be set as EVT_10US | EVT_10US
+	*******************************************************************/
+	void removeEvent(tBaseEvtMsk_t evtMsk);
 
 	/*******************************************************************
 	 * @brief	Add observer for event to another objects.
 	 * @param obs <IObsTimeBase&> - object of observer that inherits IObsTimeBase
-	 * @param evtMask <evtMask_t> - mask of events for observer. TimeBase
+	 * @param evtMsk <evtMask_t> - mask of events for observer. TimeBase
 	 *					will be event to observer only mask is set
+	 * @return	true - ok
+	 *					false - desired mask < SysConst::clkTimeBase and can't be set
 	********************************************************************/
-	void addObserver(IObsTimeBase& obs, evtMask_t evtMask);
+	bool addObserver(IObsTimeBase& obs, tBaseEvtMsk_t evtMsk);
 
 	/*******************************************************************
 	 * @brief Remove observer form TimeBase object
@@ -64,7 +92,7 @@ public:
 	 * @param events <obsEvtCode_t> - mask for events that occured 
 								(reason of call. May be used by observer for hanle the event
 	***********************************************/
-	void notifyObservers(evtMask_t events);
+	void notifyObservers(const tBaseEvtMsk_t events);
 
 	/*******************************************************************
 	 * @brief Main loop using from parent class SysTimeBase_t.
@@ -86,16 +114,14 @@ public:
 	********************************************************************/
 	std::string& getDate();
 
+
+
+
 private:
 	// for store event's mask, set when creating an object or 
 	// observer is added.
-	// If bit in m_evtMask = 1 - event as EVT_1MS was permitted
-	evtMask_t m_evtMask;
-	// For Observer
-	typedef struct {
-		IObsTimeBase* pToObs;	// pointer to observer
-		evtMask_t evtMask;		// mask for generation event for this observer
-	}timeBaseObs_t;
+	// If bit in m_evtMsk = 1 - event as EVT_1MS was permitted
+	tBaseEvtMsk_t m_evtMsk = EVT_NO;
 
 	// object Observers 
 	std::vector<timeBaseObs_t>m_observers;
@@ -128,17 +154,30 @@ private:
 	 * or observer was added)
 	 * @return <evtMask_t> - mask for events that occured
 	******************************************************************/
-	inline evtMask_t clkIncrement();
+	inline tBaseEvtMsk_t clkIncrement();
 	
 	/******************************************************************
-	 * @brief Convertion field of system time data to c_ctyle string
-	 * @param str <char*> - buffer for result. The size must be >3
+	 * @brief Convertion field of system time data to std::string
 	 * @param num <uint> - number for convertion
 	 * @return char* = input char* 
 	*******************************************************************/
-	char* convTimeFieldToStr(char* str, unsigned int num);
+	std::string convTimeFieldToStr(unsigned int num);
+
+	/******************************************************************
+	 * @brief Checks mask if can be setted
+	 * @param evtMsk 
+	 * @return	true - ok
+	 *					false - desired mask < SysConst::clkTimeBase and can't be set
+	*******************************************************************/
+	bool checkEvtMskForSet(tBaseEvtMsk_t evtMsk);
+
+	friend tBaseEvtMsk_t& operator|(tBaseEvtMsk_t& l, const tBaseEvtMsk_t& r);
+
 
 };
+
+
+
 
 /*********************************************************************
  * @brief Interface class for events organization for observers.
@@ -156,5 +195,5 @@ class IObsTimeBase
 {
 public:
 
-	virtual void handleEvent(TimeBase&, TimeBase::evtMask_t) = 0;
+	virtual void handleEvent(TimeBase&, TimeBase::tBaseEvtMsk_t) = 0;
 };

@@ -4,9 +4,15 @@
 
 #include "SysConst.h"
 #include "Buffer.h"
+#include "TimeBase.h"
 
 
-class ComPortWin32
+// if interrupts for Rx data from port is not available, for receive
+// data periodically interrogation must be used.
+#define RX_DATA_DETECT_METHOD		PERIODICALLY_INTERROGATION
+
+
+class ComPortWin32: public IObsTimeBase
 {
 public:
 
@@ -16,7 +22,7 @@ public:
 	 * @brief Com port event masks. Must be set by means of setEvent()
 	 in com module only. Events mask may be check in external path.
 	*************************************************************/
-	typedef enum EVT_COMM_MASK_ENUM
+	typedef enum EVT_COMM_WIN32_MASK_ENUM : uint16_t
 	{
 		EVT_NO,
 		// User char was detected in com-port stream
@@ -38,8 +44,9 @@ public:
 		EVT_ERR_INVALID_PARAM	= (1 << 7),
 		// Critical errors as com not ready, not open, not handle,...
 		EVT_ERR_CRITICAL			= (1 << 8),
+		EVT_END								= EVT_ERR_CRITICAL,
 	}comEvtMsk_t;
-
+	 
 	/*********************************************************
 	 * @brief Baud rate. For config Com-port's 
 	**********************************************************/
@@ -106,7 +113,7 @@ public:
 	//Event's mask for toggle WIN system's event mask. For config Com-port only
 	//and detect event in checkEventWin32
 	//**********************************************************/
-	typedef enum EVENT_SET_MASK_ENUM
+	typedef enum EVENT_SET_MASK_ENUM 
 	{
 		EVTSET_NOT_SET			= 0,
 		// Generate event if any char was received
@@ -193,14 +200,6 @@ public:
 	****************************************************************/
 	comEvtMsk_t setParam(comCfg_t& param);
 
-	/*****************************************************************
-	 * @brief Check of event.
-	 * @param evtMask_t events - external variable of events
-	 * @param evtMask_t mask - mask for check. The EVT_COMM_MASK_ENUM must be used
-	 * @return true if event is set 
-	****************************************************************/
-	bool checkEvent(comEvtMsk_t& events, comEvtMsk_t mask) const;
-
 	/**************************************************************
 	* @brief Open COM-port.
 	* Parameters will be set letter via setParam() function
@@ -279,6 +278,8 @@ public:
 	****************************************************************/
 	int getBaud() const;
 
+
+
 	/***********************************************************
 	****************	 Protected section	********************
 	************************************************************/
@@ -295,34 +296,15 @@ protected:
 	 * @param sizeRxBuf:<int> - size of Rx buffer
 	 * @param sizeTxBuf:<int> - size of Tx buffer
 	***************************************************************/
-	ComPortWin32(char* const pRxBuf, char* const pTxBuf,
+	ComPortWin32(TimeBase& sysClk, 
+		char* const pRxBuf, char* const pTxBuf,
 		int sizeRxBuf, int sizeTxBuf);
-	
+
 	/****************************************************************
-	 * @brief Delete ComPortWin32 object. Delete handler, buffers if 
+	 * @brief Delete ComPortWin32 object. Delete handler, buffers if
 	 dynamically created (if not - reset buffer's index)
 	***************************************************************/
 	~ComPortWin32();
-
-	/*************************************************************
-	* @brief For periodically check win32 events for com (events mask must be set before where
-	* com parameters was set).
-	* checkCoreEvents() must be call automatically from time base handleEvent() 
-	* if ComPort class using as observed throught IObsTimeBase.
-	* The period must be less than time when rx buffer's is full.
-	* If EV_RXCHAR event -> read win32 rx buffer while class rxBuf is not full
-	* (if full - the rest of data in win32 rx buffer are lost)
-	* @return	<evtMask_t> event mask of EVT_COMM_MASK_ENUM (all)
-	*************************************************************/
-	comEvtMsk_t checkCoreEvents();
-
-	/***************************************************************
-	* @brief Start of transmit data from tx buffer, while buffer is
-	not empty. If write to port error was detected - tx buffer stay on 
-	previous state.
-	* @return	<evtMask_t> event mask of EVT_COMM_MASK_ENUM
-	**************************************************************/
-	comEvtMsk_t startTx();
 
 	/****************************************************************
 	 * @brief Set event in external variable for detect events in the future.
@@ -332,6 +314,26 @@ protected:
 	***************************************************************/
 	void setEvent(comEvtMsk_t& events, comEvtMsk_t mask);
 
+	/***************************************************************
+	* @brief Start of transmit data from tx buffer, while buffer is
+	not empty. If write to port error was detected - tx buffer stay on
+	previous state.
+	* @return	<evtMask_t> event mask of EVT_COMM_MASK_ENUM
+	**************************************************************/
+	comEvtMsk_t startTx();
+
+	/************************************************
+	* @brief Print to port c_style string while EOF char
+	* not will be printed (EOF char set us Event char in port config).
+	* If data in buffer starts with '\0' - not copy.
+	* @param cstr	<const char*> - c_style string
+	* @return	true - OK
+	*					false - not ok. In this case EVT_ERR_CRITICAL, EVT_ERR_TX events may be
+							transmit to observers
+	***********************************************/
+	bool print(const char* cstr);
+
+
 
 	/***********************************************************
 	****************	 Private section	********************
@@ -340,6 +342,46 @@ private:
 	HANDLE m_hPort = INVALID_HANDLE_VALUE;	// for CreateFile()
 	OVERLAPPED m_rxOverlap = { 0 };					// struct of WIN32 events for ReadFile() 
 	int evtCharCnt = 0;											// counter received m_cfg.evtChar, if used
+	// pointer to clock of system
+	TimeBase* m_pSysClk = nullptr;
+
+
+	/******************************************************
+	 * @brief Subscribe object of port to clock synchronization system
+	 * Must be used if object was created without clock of system parameter
+	 * (see constructor)
+	 * @param sysClk <TimeBase> - object of clock synchronization system
+	 * @param evtMsk <tBaseEvtMsk_t> - mask of time events
+	*****************************************************/
+	bool subscribe(TimeBase& sysClk, TimeBase::tBaseEvtMsk_t evtMsk);
+
+	/*************************************************************
+	* @brief For periodically check win32 events for com (events mask must be set before where
+	* com parameters was set).
+	* checkCoreEvents() must be call automatically from time base handleEvent()
+	* if ComPort class using as observed throught IObsTimeBase.
+	* The period must be less than time when rx buffer's is full.
+	* If EV_RXCHAR event -> read win32 rx buffer while class rxBuf is not full
+	* (if full - the rest of data in win32 rx buffer are lost)
+	* @return	<evtMask_t> event mask of EVT_COMM_MASK_ENUM (all)
+	*************************************************************/
+	comEvtMsk_t checkCoreEvents();
+
+	/**********************************************
+	 * @brief	*** Event handler for TimeBase class observer's
+	 * Periodically check core's events of port, notify of observer if
+	 * core return event from port
+	 * @param Not used
+	***********************************************/
+	virtual void handleEvent(TimeBase&, TimeBase::tBaseEvtMsk_t) override;
+
+	/**********************************************
+	 * @brief Notify observers from m_observers list
+	 * @param evtMask <comEvtMsk_t> - reason of call. May be used
+								by observer for hanle the event
+	***********************************************/
+	virtual void notifyObservers(comEvtMsk_t evtMask) = 0;
+
 
 };
 

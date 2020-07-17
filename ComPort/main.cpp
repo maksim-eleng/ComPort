@@ -8,25 +8,27 @@
 #include "EventSystem.h"
 #include "utility.h"
 #include <iostream>
+#include "Nmea.h"
 
 using namespace std;
+
+TimeBase sysClk;
+
 char rxBuf[SysConst::rxBufSize];
 char txBuf[SysConst::rxBufSize];
-ComPort com(rxBuf, txBuf, sizeof(rxBuf), sizeof(txBuf));
-
+ComPort com(sysClk, rxBuf, txBuf, sizeof(rxBuf), sizeof(txBuf));
+Nmea nmea;
 
 int main(int argc, char* argv[])
 {
 	comEvtMsk_t events;
-
-	TimeBase sysClk(EVT_1S | EVT_10MS);
+	
+	
 	EventSystem evt;
 
-	sysClk.addObserver(evt, EVT_1S);
-//	sysClk.addObserver(com, EVT_10MS);
+	sysClk.addObserver(evt, TimeBase::EVT_1S);
 	com.addObserver(evt);
-
-	com.subscribe(sysClk, EVT_10MS);
+	
 	
 	{
 		int comNum = 0;
@@ -35,8 +37,9 @@ int main(int argc, char* argv[])
 		// set parameters of com port from command string 
 		if (argc > 1) {
 			bool fReady = convStrToInt(argv[1], comNum);
-			if (argc > 2 && fReady)
+			if (argc > 2 && fReady) {
 				fReady = convStrToInt(argv[2], baud);
+			}
 			if (fReady) {
 				if (!baud) {
 					baud = com.B_4800;
@@ -69,7 +72,7 @@ int main(int argc, char* argv[])
 			evt.handleEvent(com, events);
 		}
 		else {
-			com << "Start.\n" << "Port №" << com.getPortNumber() << " was opened. Baud rate: " \
+			com << "Start.\n" << " Port #" << com.getPortNumber() << " was opened. Baud rate: " \
 				<< com.getBaud() << "\n";
 		}
 	}

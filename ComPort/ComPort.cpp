@@ -2,10 +2,21 @@
 #include "utility.h"
 
 /************************************************************/
-ComPort::ComPort(char* const pRxBuf, char* const pTxBuf,
+
+#if RX_DATA_DETECT_METHOD == PERIODICALLY_INTERROGATION
+
+ComPort::ComPort(TimeBase& sysClk, char* const pRxBuf, char* const pTxBuf,
   int sizeRxBuf, int sizeTxBuf)
-  :SysComPort_t(pRxBuf, pTxBuf, sizeRxBuf, sizeTxBuf)
+  :SysComPort_t(sysClk, pRxBuf, pTxBuf, sizeRxBuf, sizeTxBuf)
 {}
+
+#else
+
+ComPort::ComPort(char* const pRxBuf, char* const pTxBuf, int sizeRxBuf, int sizeTxBuf)
+	:SysComPort_t(pRxBuf, pTxBuf, sizeRxBuf, sizeTxBuf)
+{}
+
+#endif
 
 /************************************************************/
 ComPort::~ComPort()
@@ -14,9 +25,15 @@ ComPort::~ComPort()
 }
 
 /**************************************************************/
+bool ComPort::print(std::string str)
+{
+	return SysComPort_t::print(str.c_str());
+}
+
+/**************************************************************/
 ComPort& ComPort::operator<<(const char* cstr)
 {
-	print(cstr);
+	SysComPort_t::print(cstr);
 	return *this;
 }
 
@@ -25,42 +42,9 @@ ComPort& ComPort::operator<<(const int num)
 {
 	char cstr[12];
 	convIntToStr(num, cstr);
-	print(cstr);
+	SysComPort_t::print(cstr);
 	return *this;
 }
-
-/**************************************************************/
-bool ComPort::print(const char* cstr)
-{
-	comEvtMsk_t evt = EVT_NO;
-	if (!isPortOpened()) {
-		setEvent(evt, EVT_ERR_CRITICAL);
-	}
-	if (EVT_NO == evt) {
-		int res;
-		bool fPutTerm = false;
-		res = m_txBuf.put(cstr, m_cfg.evtChar);
-		if (bufResultNG == res) {
-			setEvent(evt, EVT_ERR_TX);
-		}
-		else {
-			evt = startTx();
-		}
-	}
-	if (EVT_NO != evt) {
-		notifyObservers(evt);
-		return false;
-	}
-	return true;
-}
-
-/**************************************************************/
-bool ComPort::print(std::string str)
-{
-	return print(str.c_str());
-}
-
-
 
 /**************************************************************/
 int ComPort::getRxStr( char* str, int size)
@@ -79,6 +63,18 @@ bool ComPort::redirectStrTo(ComPort& dstCom, bool fTransfer)
 	if (res)
 		startTx();
 	return res;
+}
+
+/**************************************************************/
+int ComPort::searchInRxBuf(char byte)
+{
+	return m_rxBuf.search(byte);
+}
+
+/**************************************************************/
+int ComPort::searchInRxBuf(const char* str, int pStartInBuf, bool isReturnIndAfterStr)
+{
+	return m_rxBuf.search(str, pStartInBuf, isReturnIndAfterStr);
 }
 
 /***********************************************/
@@ -101,30 +97,8 @@ void ComPort::removeObserver(IObsComPort & obs)
 /**************************************************************/
 void ComPort::notifyObservers(comEvtMsk_t evtMask)
 {
-  for (auto& observer : m_observers) {
-    observer->handleEvent(*this, evtMask);
+  for (auto& obs : m_observers) {
+    obs->handleEvent(*this, evtMask);
   }
 }
 
-/**************************************************************/
-int ComPort::searchInRxBuf(char byte)
-{
-	return m_rxBuf.search(byte);
-}
-
-/**************************************************************/
-int ComPort::searchInRxBuf(const char* str, int pStartInBuf, bool isReturnIndAfterStr)
-{
-	return m_rxBuf.search(str, pStartInBuf, isReturnIndAfterStr);
-}
-
-/**************************************************************/
-void ComPort::handleEvent(TimeBase&, TimeBase::evtMask_t)
-{
-	SysComPort_t::comEvtMsk_t events;
-	events = SysComPort_t::checkCoreEvents();
-	if (events)
-	{
-		notifyObservers(events);
-	}
-}

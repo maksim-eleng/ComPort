@@ -13,6 +13,12 @@ class TimeBaseWin32
 {
 public:
 
+	/*************************************************
+	 * @brief Check Win32 counters and call handleEvent()
+	 * with SysConst::clkTimeBase period. Must be call in
+	 * main loop as while(1).
+	 * Using if system not have SysClk interrupt.
+	**************************************************/
 	void loop()
 	{
 		static uint64_t tBegin = 0;
@@ -20,13 +26,6 @@ public:
 			tBegin = __rdtsc();
 			handleEvent();
 		}
-		//static uint64_t tBegin = 0;
-		//LARGE_INTEGER Integer;
-		//QueryPerformanceCounter(&Integer);
-		//if ((Integer.QuadPart - tBegin) >= m_ticksPerSysClk) {
-		//	tBegin = Integer.QuadPart;
-		//	handleEvent();
-		//}
 	}
 
 protected:

@@ -1,31 +1,44 @@
 
 #include "TimeBase.h"
 
-/**************************************************/
-TimeBase::TimeBase(evtMask_t evtMask)
-{
-	evtMask_t tmpMsk = evtMask;
-	int pos = 0;
-	unsigned int multiplier;
 
-	while (!(tmpMsk & (1 << pos))) {
-		++pos;
-	}
-	for (multiplier = 1; pos; --pos) {
-		multiplier *= 10;
-	}
-	if (multiplier >= SysConst::clkTimeBase) {
-		m_evtMask = evtMask;
-	}
-	else { m_evtMask = 0; }
-	assert(m_evtMask);
+/**************************************************/
+TimeBase::TimeBase(tBaseEvtMsk_t evtMsk)
+{
+	addEvent(evtMsk);
 }
 
 /**************************************************/
-void TimeBase::addObserver(IObsTimeBase& obs, evtMask_t evtMask)
+bool TimeBase::addEvent(tBaseEvtMsk_t evtMsk)
 {
-	timeBaseObs_t object = { &obs, evtMask };
-	m_observers.push_back(object);
+	if (checkEvtMskForSet(evtMsk)) {
+		m_evtMsk = m_evtMsk | evtMsk;
+		return true;
+	}
+	return false;
+}
+
+/**************************************************/
+void TimeBase::removeEvent(tBaseEvtMsk_t evtMsk)
+{
+	m_evtMsk = (tBaseEvtMsk_t)(m_evtMsk & (~((tBaseEvtMskInt_t)evtMsk)));
+}
+
+/**************************************************/
+bool TimeBase::addObserver(IObsTimeBase& obs, tBaseEvtMsk_t evtMsk)
+{
+	if (addEvent(evtMsk)) {
+		for (auto _obs : m_observers) {
+			if (_obs.pToObs == &obs) {
+				_obs.evtMask = _obs.evtMask | evtMsk;
+				return true;
+			}
+		}
+		timeBaseObs_t object = { &obs, evtMsk };
+		m_observers.push_back(object);
+		return true;
+	}
+	return false;
 }
 
 /**************************************************/
@@ -40,12 +53,12 @@ void TimeBase::removeObserver(IObsTimeBase& obs)
 }
 
 /**************************************************/
-void TimeBase::notifyObservers(evtMask_t evtMsk)
+void TimeBase::notifyObservers(const tBaseEvtMsk_t evtMsk)
 {
 	for (auto obs : m_observers) {
-		evtMask_t mask = obs.evtMask & evtMsk;
+		tBaseEvtMskInt_t mask = obs.evtMask & evtMsk;
 		if (mask) {
-			obs.pToObs->handleEvent(*this, mask);
+			obs.pToObs->handleEvent(*this, (tBaseEvtMsk_t)mask);
 		}
 	}
 }
@@ -53,31 +66,29 @@ void TimeBase::notifyObservers(evtMask_t evtMsk)
 /**************************************************/
 std::string& TimeBase::getTime()
 {
-	char buf[3];
-	m_timeStr = std::string(convTimeFieldToStr(buf, m_time.hour));
+	m_timeStr = convTimeFieldToStr(m_time.hour);
 	m_timeStr += ':';
-	m_timeStr += std::string(convTimeFieldToStr(buf, m_time.min));
+	m_timeStr += convTimeFieldToStr(m_time.min);
 	m_timeStr += ':';
-	m_timeStr += std::string(convTimeFieldToStr(buf, m_time.sec));
+	m_timeStr += convTimeFieldToStr(m_time.sec);
 	return m_timeStr;
 }
 
 /**************************************************/
 std::string& TimeBase::getDate()
 {
-	char buf[3];
-	m_dateStr = std::string(convTimeFieldToStr(buf, m_time.day));
+	m_dateStr = convTimeFieldToStr(m_time.day);
 	m_dateStr += '.';
-	m_dateStr += std::string(convTimeFieldToStr(buf, m_time.month));
+	m_dateStr += convTimeFieldToStr(m_time.month);
 	m_dateStr += '.';
-	m_dateStr += std::string(convTimeFieldToStr(buf, m_time.year));
+	m_dateStr += convTimeFieldToStr(m_time.year);
 	return m_dateStr;
 }
 
 /**************************************************/
 void TimeBase::handleEvent()
 {
-	evtMask_t events = clkIncrement();
+	tBaseEvtMsk_t events = clkIncrement();
 	// notify Observers
 	if (events) {
 		notifyObservers(events);
@@ -85,7 +96,7 @@ void TimeBase::handleEvent()
 }
 
 /**************************************************/
-inline TimeBase::evtMask_t TimeBase::clkIncrement()
+inline TimeBase::tBaseEvtMsk_t TimeBase::clkIncrement()
 {
 	// field layout (number of position) must be much number of bits in EVT_??? mask
 	constexpr static uint32_t div[] = {
@@ -99,8 +110,8 @@ inline TimeBase::evtMask_t TimeBase::clkIncrement()
 	};
 
 	static uint32_t cnt = 0;
-	evtMask_t evtRes = 0;
-	evtMask_t tmpMsk = m_evtMask;
+	tBaseEvtMskInt_t evtRes = EVT_NO;
+	tBaseEvtMskInt_t tmpMsk = m_evtMsk;
 	int pos = 0;
 
 	while (tmpMsk) {
@@ -112,7 +123,7 @@ inline TimeBase::evtMask_t TimeBase::clkIncrement()
 	}
 
 	// System clock
-	if (!(cnt % ((uint32_t)1E6 / SysConst::clkTimeBase))) {
+	if (evtRes & EVT_1S) {
 		if (++m_time.sec >= 60) {
 			m_time.sec = 0;
 			++m_time.min;
@@ -138,19 +149,40 @@ inline TimeBase::evtMask_t TimeBase::clkIncrement()
 	if (++cnt > 1E6L)
 		cnt = 0;
 
-	return evtRes;
+	return (tBaseEvtMsk_t)evtRes;
 }
 
-char* TimeBase::convTimeFieldToStr(char* str, unsigned int num)
+/**************************************************/
+std::string TimeBase::convTimeFieldToStr(unsigned int num)
 {
-	int i = 0;
+	std::string str;
 	if (num >= 10) {
-		str[i] = num / 10 + '0';
+		str = num / 10 + '0';
 	}
 	else {
-		str[i] = '0';
+		str = '0';
 	}
-	str[++i] = num % 10 + '0';
-	str[++i] = '\0';
+	str += num % 10 + '0';
 	return str;
+}
+
+/**************************************************/
+bool TimeBase::checkEvtMskForSet(tBaseEvtMsk_t evtMsk)
+{
+	unsigned int multiplier = 1;
+	tBaseEvtMskInt_t tmpMsk = evtMsk;
+
+	while (!(tmpMsk & (1 << 0))) {
+		tmpMsk >>= 1;
+		multiplier *= 10;
+	}
+	if (multiplier >= SysConst::clkTimeBase) {
+		return true;
+	}
+	return false;
+}
+
+TimeBase::tBaseEvtMsk_t& operator|(TimeBase::tBaseEvtMsk_t& l, const TimeBase::tBaseEvtMsk_t& r)
+{
+	return l = static_cast<TimeBase::tBaseEvtMsk_t>(l | static_cast<TimeBase::tBaseEvtMskInt_t>(r));
 }
