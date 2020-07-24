@@ -1,12 +1,15 @@
 #include "Buffer.h"
 
 #include <cassert>
+#include <iostream>
 
 
 /**********************************************************/
 Buffer::Buffer(char* buf, int size)
 	: m_data(buf), m_size(size)
 {
+	std::cout << "buf constructor\n";
+
 	assert(m_size && "Buffer's size = 0");
 	// the index can't occupy a signed bit
 	assert((m_size > sizeof(size) * 4) && "Size is big");
@@ -21,6 +24,7 @@ Buffer::Buffer(char* buf, int size)
 /**********************************************************/
 Buffer::~Buffer()
 {
+	std::cout << "buf destructor\n";
 	if (isDynamic_m_data) {
 		delete[]m_data;
 		m_data = nullptr;

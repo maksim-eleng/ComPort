@@ -28,7 +28,7 @@ void TimeBase::removeEvent(tBaseEvtMsk_t evtMsk)
 bool TimeBase::addObserver(IObsTimeBase& obs, tBaseEvtMsk_t evtMsk)
 {
 	if (addEvent(evtMsk)) {
-		for (auto _obs : m_observers) {
+		for (auto& _obs : m_observers) {
 			if (_obs.pToObs == &obs) {
 				_obs.evtMask = _obs.evtMask | evtMsk;
 				return true;
@@ -44,12 +44,27 @@ bool TimeBase::addObserver(IObsTimeBase& obs, tBaseEvtMsk_t evtMsk)
 /**************************************************/
 void TimeBase::removeObserver(IObsTimeBase& obs)
 {
+	tBaseEvtMsk_t obsMsk = EVT_NO;
 	for (int ind = 0; ind < m_observers.size(); ++ind) {
 		if (&obs == m_observers[ind].pToObs) {
+			obsMsk = m_observers[ind].evtMask;
 			m_observers.erase(m_observers.begin() + ind);
 			break;
 		}
 	}
+	bool fl = true;
+	tBaseEvtMsk_t resMsk = EVT_NO;
+	for (int ind = 0; ind < m_observers.size(); ++ind) {
+		resMsk = resMsk | m_observers[ind].evtMask;
+	}
+	removeEvent((tBaseEvtMsk_t)(obsMsk & resMsk));
+
+}
+
+/**************************************************/
+std::vector<TimeBase::timeBaseObs_t>& TimeBase::getObservers()
+{
+	return m_observers;
 }
 
 /**************************************************/

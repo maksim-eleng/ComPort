@@ -2,7 +2,6 @@
 
 #ifdef _WIN32
 
-#include "SysConst.h"
 #include "Buffer.h"
 #include "TimeBase.h"
 
@@ -221,6 +220,7 @@ public:
 	* Creates a file descriptor.
 	* Timings set as: for Read 1 char - max, the rest coeffichience - 0
 	* (for without delays and wait operation).
+	* Subscribe to sysClk with 10ms period
 	* Description in http ://vsokovikov.narod.ru/New_MSDN_API/Menage_files/fn_createfile.htm
 	* https://ru.wikibooks.org/wiki/COM-%D0%BF%D0%BE%D1%80%D1%82_%D0%B2_Windows_%28%D0%BF%D1%80%D0%BE%D0%B3%D1%80%D0%B0%D0%BC%D0%BC%D0%B8%D1%80%D0%BE%D0%B2%D0%B0%D0%BD%D0%B8%D0%B5%29
 	* @param comName	<const char* const> - number of com port in the form "COM1" or "\\.\COM1"
@@ -233,6 +233,7 @@ public:
 	/**************************************************************
 	* @brief Close com-port. (handle only). 
 	* Other all variables of class are reset in default value, except user's param
+	* The observer for sysClk will be deleted
 	* You can reopen port letter 
 	**************************************************************/
 	void close();
@@ -341,9 +342,9 @@ protected:
 private:
 	HANDLE m_hPort = INVALID_HANDLE_VALUE;	// for CreateFile()
 	OVERLAPPED m_rxOverlap = { 0 };					// struct of WIN32 events for ReadFile() 
-	int evtCharCnt = 0;											// counter received m_cfg.evtChar, if used
+	int m_evtCharCnt = 0;											// counter received m_cfg.evtChar, if used
 	// pointer to clock of system
-	TimeBase* m_pSysClk = nullptr;
+	TimeBase* m_pSysClk;
 
 
 	/******************************************************

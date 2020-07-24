@@ -41,7 +41,7 @@ public:
 	************************************************************/
 	ComPort(TimeBase& sysClk,
 		char* const pRxBuf = nullptr, char* const pTxBuf = nullptr,
-		int sizeRxBuf = MIN_BUF_SIZE, int sizeTxBuf = MIN_BUF_SIZE);
+		int sizeRxBuf = SysConst::rxBufSize, int sizeTxBuf = SysConst::txBufSize);
 
 #else
 	/***********************************************************
@@ -59,6 +59,7 @@ public:
 		int sizeRxBuf = MIN_BUF_SIZE, int sizeTxBuf = MIN_BUF_SIZE);
 
 #endif
+
 
 	/***********************************************************
 	 * @brief Delete ComPort object.
@@ -109,6 +110,12 @@ public:
 	 *						found before buffer is empty
 	**************************************************************/
 	int getRxStr( char* str, int size);
+
+	/**************************************************************
+	* @brief Get number of channel of port. May be used if using several ports
+	* @return <uint8_t> - number of channel of port in range 0...
+	**************************************************************/
+	uint8_t getNumOfChannel() const;
 
 
 	/**************************************************************
@@ -169,7 +176,12 @@ public:
 private:
 	// pointers for observer objects 
 	std::vector< IObsComPort* > m_observers;
-
+	// Number of channel of port. May be used if using several ports
+	// as number of channel of port. Init where object is created and
+	// must be in range 0...
+	uint8_t m_numOfChannel;
+	// for detect number of created objects
+	static uint8_t m_numOfObject;
 
 	/**********************************************
 	 * @brief Notify observers from m_observers list

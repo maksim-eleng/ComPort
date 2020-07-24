@@ -21,7 +21,7 @@
 #define BUF_NOT_CFG			-1
 
 // minimum buffer size. default for dynamic data
-#define MIN_BUF_SIZE	512
+#define MIN_BUF_SIZE	256
 
 // disable/enuble interrupt for controller system
 #ifndef DISABLE_INTERRUPT
@@ -48,7 +48,7 @@ public:
 	Buffer(char* buf = 0, int size = MIN_BUF_SIZE);
 
 	// Copying of objects is prohibited
- 	Buffer(const Buffer& buf) = delete;
+ 	//Buffer(const Buffer& buf) = delete;
 
 	/****************************************************
 	 * @brief	Destructor. If nenory for buffer was allocated dynamically - release

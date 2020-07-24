@@ -7,7 +7,7 @@
 class EventSystem: public IObsTimeBase, public IObsComPort
 {
 public:
-	EventSystem() {}
+	//EventSystem() {}
 	
 	virtual void handleEvent(TimeBase& ref, TimeBase::tBaseEvtMsk_t) override;
 

@@ -223,7 +223,9 @@ ComPortWin32::comEvtMsk_t ComPortWin32::open( int comNum, comBaud_t baud )
   }
 
   // forming result of operation 
+  // subscribe to sysClk for periodically interview of WIN32 rx Buffer
   if (fPortReady) {
+    subscribe(*m_pSysClk, TimeBase::EVT_10MS);
     m_cfg.number = comNum;
     m_cfg.baud = baud;
   }
@@ -255,9 +257,13 @@ void ComPortWin32::close()
     m_hPort = INVALID_HANDLE_VALUE;
     m_rxBuf.resetIndex();
     m_txBuf.resetIndex();
-    evtCharCnt = 0;
+    m_evtCharCnt = 0;
     m_rxOverlap = { 0 };
   }
+  if (m_pSysClk) {
+    m_pSysClk->removeObserver(*this);
+  }
+
 }
 
 /***********************************************************/
@@ -279,13 +285,13 @@ bool ComPortWin32::isPortOpened() const
 
 int ComPortWin32::userCharGetReceivedCounter() const
 {
-  return evtCharCnt;
+  return m_evtCharCnt;
 }
 
 /***********************************************************/
 void ComPortWin32::userCharHandled()
 {
-  --evtCharCnt;
+  --m_evtCharCnt;
 }
 
 /***********************************************************/
@@ -305,17 +311,13 @@ ComPortWin32::ComPortWin32(TimeBase& sysClk, char* const pRxBuf, char* const pTx
   int sizeRxBuf, int sizeTxBuf)
   :m_rxBuf(pRxBuf, sizeRxBuf), m_txBuf(pTxBuf, sizeTxBuf)
 {
-  subscribe(sysClk, TimeBase::EVT_10MS);
-
+  m_pSysClk = &sysClk;
 }
 
 /***********************************************************/
 ComPortWin32::~ComPortWin32()
 {
   close();
-  if (m_pSysClk) {
-    m_pSysClk->removeObserver(*this);
-  }
 }
 
 /******************************************************/
@@ -506,7 +508,7 @@ ComPortWin32::comEvtMsk_t ComPortWin32::checkCoreEvents()
           // if Event char was detected in input stream
           if (buf[i] == m_cfg.evtChar) {
             setEvent(events, EVT_RX_USER_CHAR);
-            ++evtCharCnt;
+            ++m_evtCharCnt;
           }
         }
       } while (len);//while

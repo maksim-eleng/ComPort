@@ -1,108 +1,204 @@
 #include "Nmea.h"
+#include <iostream>
+
+/************************************************************/
+bool NMEA::checkCfgEEPROM(nmeaCfgEEPROM_t& cfgEEPROM, uint8_t unprogValue)
+{
+	for (auto& chCfg : cfgEEPROM.chCfg) {
+		for (auto& cmd : chCfg.cmdPermits) {
+			if (cmd != unprogValue)
+				return true;
+		}
+		if (chCfg.BautRate != unprogValue || chCfg.TimeInterval != unprogValue ||
+				chCfg.TIDPriorityPermis != unprogValue ||
+				chCfg.ioUsedForUART.in != unprogValue || chCfg.ioUsedForUART.out != unprogValue) {
+			return true;
+		}
+	}
+	if (cfgEEPROM.numOfTerminalChannel != unprogValue) {
+		return true;
+	}
+	return false;
+}
 
 /**
  * @brief 
  * @param cfg 
  * @return 
 */
-NMEA::NMEA(nmeaCfgEEPROM_t& cfgExternal)
+NMEA::NMEA(nmeaCfgEEPROM_t& cfgEEPROM, std::vector<ComPort>& com, TimeBase& sysClk)
+	:m_com(com)
 {
-	/*******************************************************/
-// Инициализация переменных для NMEA в памяти, EEPROM
-// настройка буфера под работу NMEA
-// При начальной инициализации нового контроллера в EEPROM заносим TimeInterval=T_1S, UARTBautRate=B_4800.
-// Запрет конвертации для команд, для которых не может быть конвертации
-// Разрешение входа для команды PRG
-// Формирование Cmd как будто нет команд. Остальные поля - с EEPROM
-// Инициализация указателей на ф-ии формирования соответствующими адресами
-// Инициализация NMEAFl
-// Инициализация массива структур TID, как будто Talker нет нигде (TIMEOUT)
-// Инициализация буферов приема/передачи
-// Настройка необходимого железа
-/*******************************************************/
-	for (int ch = 0; ch < SysConst::UARTChannel; ch++) {
-		m_nmeaFl.chCfg[ch].cmd[GGA].permit = In;
-
-		cfgExternal.chCfg[ch].cmd[GGA] = In | Out;
-		// инициализация структуры NMEAFl
-		nmeaFl[ch].StateFrame = NoFrame;
-		nmeaFl[ch].Command = NO;
-		nmeaFl[ch].DelayedCounter = 0;
-		nmeaFl[ch].NewStrInPrg = 0;
-		nmeaFl[ch].PermisTx = 0;
-		nmeaFl[ch].ChechSumErrFlag = Off;
-		nmeaFl[ch].TimeInterval = eeSet.nmea[ch].TimeInterval;
-		nmeaFl[ch].CmdPoint = nmeaCmd[ch];
-		// заносим указатели на функции для формирвоания строки
-		nmeaFl[ch].CmdPoint[GGA].FormingStr = nmeaFormingGGAStr;
-		nmeaFl[ch].CmdPoint[GNS].FormingStr = nmeaFormingGNSStr;
-		nmeaFl[ch].CmdPoint[GLL].FormingStr = nmeaFormingGLLStr;
-		nmeaFl[ch].CmdPoint[RMC].FormingStr = nmeaFormingRMCStr;
-		nmeaFl[ch].CmdPoint[VTG].FormingStr = nmeaFormingVTGStr;
-		nmeaFl[ch].CmdPoint[ZDA].FormingStr = nmeaFormingZDAStr;
-		nmeaFl[ch].CmdPoint[DTM].FormingStr = nmeaFormingDTMStr;
-		nmeaFl[ch].CmdPoint[HDT].FormingStr = nmeaFormingHDTStr;
-		nmeaFl[ch].CmdPoint[HDG].FormingStr = nmeaFormingNullFunction;
-		nmeaFl[ch].CmdPoint[HDM].FormingStr = nmeaFormingHDMStr;
-		nmeaFl[ch].CmdPoint[VBW].FormingStr = nmeaFormingVBWStr;
-		nmeaFl[ch].CmdPoint[VHW].FormingStr = nmeaFormingVHWStr;
-		nmeaFl[ch].CmdPoint[VDO].FormingStr = nmeaFormingNullFunction;
-		nmeaFl[ch].CmdPoint[ALR].FormingStr = (void (*)(u08))stimerLoop;
-		nmeaFl[ch].CmdPoint[SYS].FormingStr = nmeaFormingNullFunction;
-		for (uint8_t cmd = 0; cmd < MAX_nmeaCommandStr_INDEX; cmd++) {
-			nmeaFl[ch].CmdPoint[cmd].All = eeSet.nmea[ch].cmd[cmd].All;
-			nmeaFl[ch].CmdPoint[cmd].Counter = TIMEOUT;
-			nmeaFl[ch].CmdPoint[cmd].TimeOut = NG;
+	// check setting in EEPROM and config as default if nessessary
+	if (checkCfgEEPROM(cfgEEPROM, 0x00) == false || checkCfgEEPROM(cfgEEPROM, 0xFF) == false) {
+		setCfgDefault(cfgEEPROM);
+	}
+	// config NMEA cfg 
+	for (int ch = 0; ch < SysConst::maxUARTChannel; ++ch) {
+		chFlags_t& chFl = m_flags[ch];
+		for (int cmd = NO; cmd < MAX_NMEACmdStrIndex; cmd++) {
+			chFl.cmd[cmd].permits = (cmdPermits_t)cfgEEPROM.chCfg[ch].cmdPermits[cmd];
+			chFl.cmd[cmd].counter = TIMEOUT;
 		} // end for cmd
-		nmeaFl[ch].TIDPriorityPermis = eeSet.nmea[ch].TIDPriorityPermis;
-	} // end for ch
-	for (uint8_t entry = 0; entry < ENTRY_TID_MAX; entry++) {
-		TID[entry].Name[0] = TID[entry].Name[1] = 0;
-		TID[entry].Channel = 0;
-		TID[entry].Counter = TIMEOUT;
+		chFl.BautRate = cfgEEPROM.chCfg[ch].BautRate;
+		chFl.TimeInterval = cfgEEPROM.chCfg[ch].TimeInterval;
+		chFl.TIDPriorityPermis = cfgEEPROM.chCfg[ch].TIDPriorityPermis;
+		chFl.ioUsedForUART.in = cfgEEPROM.chCfg[ch].ioUsedForUART.in;
+		chFl.ioUsedForUART.out = cfgEEPROM.chCfg[ch].ioUsedForUART.in;
+		//	nmeaFl[ch].PermisTx = 0;
+		//	nmeaFl[ch].ChechSumErrFlag = Off;
 	}
-	// разр на канале UART_ESP8266 для команды SYS вход/выход
-	nmeaFl[ESP8266_UART].CmdPoint[SYS].All = (1 << In) | (1 << Out);
-	stimerCreate(&sTimerALRMes, 0, ALR_MES_PERIOD, SYS_CLK_PERIOD,
-		STOP, (void (*)(int))nmeaFormingCourseALRStr, 0);
+	m_numOfTerminalChannel = cfgEEPROM.numOfTerminalChannel;
 
+	sysClk.addObserver(*this, sysClk.EVT_1S);
+	// Creates of ports
+	for (unsigned ch = 0; ch < SysConst::maxUARTChannel; ++ch) {
+		comEvtMsk_t events;
+		m_com.push_back(ComPort(sysClk));
+		m_com[ch].addObserver(*this);
+		events = m_com[ch].open(ch, m_flags[ch].BautRate);
+		if (ComPort::EVT_NO == events) {
+			comCfg_t cfg;
+			cfg.byteSize = 8;
+			cfg.parity = ComPort::P_NO;
+			cfg.stopBits = ComPort::SBIT_ONE;
+			cfg.evtChar = '\n';
+			events = m_com[ch].setParam(cfg);
+			if (ComPort::EVT_NO == events) {
+			}
+		}
+		else {
+//			m_com.erase(m_com.begin() + ch);
+		}
+	}
 
 }
 
-bool NMEA::setCfgDefault(nmeaCfg_t& cfg, int ch, bool fSave)
+/************************************************************/
+void NMEA::setCfgDefault(nmeaCfgEEPROM_t& cfgEEPROM, char ch)
 {
-	// для канала eeSet.uartTerminalNum выставляем скорость 38400
-	// остальные  - 4800
-	if (ch == cfg.numOfTerminalChannel) { 
-		cfg.channel[ch].BautRate = ComPort::B_38400; 
+	nmeaCfgEEPROM_t::CFG_CHANNEL_EEPROM_STRUCT& chCfg = cfgEEPROM.chCfg[ch];
+	bool isTerminalCh = cfgEEPROM.numOfTerminalChannel == ch;
+	// set baud 38400 for terminal channel and 4800 for another
+	if (isTerminalCh) 
+		//chCfg.BautRate = ComPort::B_38400;
+		chCfg.BautRate = ComPort::B_4800;
+	else 
+		chCfg.BautRate = ComPort::B_4800;
+
+	chCfg.TimeInterval = T_1S;
+	chCfg.TIDPriorityPermis = On;
+	chCfg.ioUsedForUART.in = On;	// used as uart
+	chCfg.ioUsedForUART.out = On;	// used as uart
+	// permis in, out only for all command for terminal channel
+	// and in only for rest
+	for (int cmd = NO; cmd < MAX_NMEACmdStrIndex; ++cmd) {
+		if (!isTerminalCh)
+			chCfg.cmdPermits[cmd] = In_E;
+		else
+			chCfg.cmdPermits[cmd] = (cmdPermitsEEPROM_t)(In_E | Out_E);
 	}
-	else { 
-		cfg.channel[ch].BautRate = ComPort::B_4800; 
-	}
-	cfg.channel[ch].TimeInterval = T_1S;
-	cfg.channel[ch].TIDPriorityPermis = On;
-	cfg.channel[ch].ioUsedForUART.in = On;	// used as uart
-	cfg.channel[ch].ioUsedForUART.out = On;	// used as uart
-	for (int cmd = NO; cmd < MAX_NMEACommandStrIndex; cmd++) {
-		if (ch == cfg.numOfTerminalChannel) { 
-			cfg.channel[ch].cmd[cmd].All = IN_E | OUT_E; 
-		}
-		else { 
-			cfg.channel[ch].cmd[cmd].All = IN_E; 
-		}
-	}
-	//if (fSave) {
-	//	return eepromWriteStr((uint8_t*)(&eeSet), EE_SET_STRUCT_PAGE, sizeof(eeSet));
-	//}
-	return true;
 }
 
-bool NMEA::setCfgDefault(nmeaCfg_t& cfg, bool fSave)
+/************************************************************/
+void NMEA::setCfgDefault(nmeaCfgEEPROM_t& cfgEEPROM)
 {
-	for (int ch = 0; ch < SysConst::UARTChannel; ch++) {
-		setCfgDefault(cfg, ch, false);
+	cfgEEPROM.numOfTerminalChannel = 0;
+	for (int ch = 0; ch < SysConst::maxUARTChannel; ++ch) {
+		setCfgDefault(cfgEEPROM, ch);
 	}
-	//if (fSave) {
-	//	eepromWriteStr((uint8_t*)(&eeSet), EE_SET_STRUCT_PAGE, sizeof(eeSet));
-	//}
+}
+
+bool NMEA::checkCmdPermits(chFlags_t& chFl, cmdName_t cmd, cmdPermits_t permitMsk)
+{
+	return chFl.cmd[cmd].permits & permitMsk;
+}
+
+//void NMEA::setPermits(const cmdName_t& cmd, const cmdPermit_t& permitMsk, const uint8_t ch)
+//{
+//	auto tmp = m_nmeaFl.chCfg[ch].cmd[cmd].permit | permitMsk;
+//	m_nmeaFl.chCfg[ch].cmd[cmd].permit = (cmdPermit_t)tmp;
+//}
+//
+//void NMEA::resetPermits(const cmdName_t& cmd, const cmdPermit_t& permitMsk, const uint8_t ch)
+//{
+//	auto tmp = m_nmeaFl.chCfg[ch].cmd[cmd].permit & ~permitMsk;
+//	m_nmeaFl.chCfg[ch].cmd[cmd].permit = (cmdPermit_t)tmp;
+//}
+
+void NMEA::formingGGAStr()
+{
+	//count++;
+}
+
+void NMEA::formingGNSStr()
+{
+	//count--;
+}
+
+void NMEA::formingGLLStr()
+{
+}
+
+void NMEA::formingRMCStr()
+{
+}
+
+void NMEA::formingVTGStr()
+{
+}
+
+void NMEA::formingZDAStr()
+{
+}
+
+void NMEA::formingDTMStr()
+{
+}
+
+void NMEA::formingHDTStr()
+{
+}
+
+void NMEA::formingHDMStr()
+{
+}
+
+void NMEA::formingVBWStr()
+{
+}
+
+void NMEA::formingVHWStr()
+{
+}
+
+void NMEA::formingStr()
+{
+}
+
+
+/**************************************************************/
+void NMEA::handleEvent(TimeBase& ref, TimeBase::tBaseEvtMsk_t evtMsk)
+{
+	if (evtMsk & ref.EVT_1S) {
+		ComPort* terminal = &m_com[m_numOfTerminalChannel +1];
+		std::cout << '\n' << ref.getTime() << '\t' << ref.getDate() << '\n';
+		terminal->print("$GPRMC,101530.32,A,2726.68,S,15307.56,E,012,032,050620,11,E*63\r\n");
+		terminal->print("$GPGGA,101525.83,2726.68,S,15307.56,E,1,4,002,+15,M,046,M,,*71\r\n");
+		terminal->print("$GPGNS,104757.19,2726.68,S,15307.56,E,,6,002,15,046,,*73\r\n");
+	}
+}
+
+/**************************************************************/
+void NMEA::handleEvent(ComPort& com, comEvtMsk_t evtMask)
+{
+	// 
+	if (evtMask & com.EVT_RX_USER_CHAR) {
+		while (com.userCharGetReceivedCounter()) {
+			char str[SysConst::nmeaMaxStrLen];
+			com.getRxStr(str, sizeof(str));
+			std::cout << str;
+			com.userCharHandled();
+		}
+	}
 }

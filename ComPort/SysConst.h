@@ -4,10 +4,11 @@
 #include <stdint.h>
 
 namespace SysConst {
-	constexpr uint32_t clkTimeBase = 1000;	// mks, main clock time base
-	constexpr char	UARTChannel = 1;				// number of channel of UART for NMEA
-	constexpr int	rxBufSize = 300;
-	constexpr int	txBufSize = 500;
+	constexpr uint32_t	clkTimeBase = 1000;	// mks, main clock time base
+	constexpr uint8_t		maxUARTChannel = 5;				// max number of UART channel for NMEA
+	constexpr uint16_t	rxBufSize = 500;
+	constexpr uint16_t	txBufSize = 500;
+	constexpr uint8_t		nmeaMaxStrLen = 150;
 
 
 }

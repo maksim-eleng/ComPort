@@ -3,18 +3,26 @@
 
 /************************************************************/
 
+uint8_t ComPort::m_numOfObject = 0;
+
+
 #if RX_DATA_DETECT_METHOD == PERIODICALLY_INTERROGATION
 
 ComPort::ComPort(TimeBase& sysClk, char* const pRxBuf, char* const pTxBuf,
   int sizeRxBuf, int sizeTxBuf)
   :SysComPort_t(sysClk, pRxBuf, pTxBuf, sizeRxBuf, sizeTxBuf)
-{}
+{
+	m_numOfChannel = m_numOfObject++;
+}
 
 #else
 
 ComPort::ComPort(char* const pRxBuf, char* const pTxBuf, int sizeRxBuf, int sizeTxBuf)
 	:SysComPort_t(pRxBuf, pTxBuf, sizeRxBuf, sizeTxBuf)
-{}
+{
+	++m_numOfObject;
+	m_numOfChannel = m_numOfObject - 1;
+}
 
 #endif
 
@@ -50,6 +58,12 @@ ComPort& ComPort::operator<<(const int num)
 int ComPort::getRxStr( char* str, int size)
 {
   return m_rxBuf.get(str, size, m_cfg.evtChar);
+}
+
+/**************************************************************/
+uint8_t ComPort::getNumOfChannel() const
+{
+	return m_numOfChannel;
 }
 
 /**************************************************************/

@@ -86,6 +86,12 @@ public:
 	********************************************************************/
 	void removeObserver(IObsTimeBase& obs);
 
+	/*******************************************************************
+	* @brief Get observers vector for TimeBase object  
+	* @return 
+	********************************************************************/
+	std::vector<timeBaseObs_t>& getObservers();
+
 	/**********************************************
 	 * @brief Notify observers from m_observers list, if observer
 	 * was subscribed to event
