@@ -218,10 +218,8 @@ ComPortWin32::comEvtMsk_t ComPortWin32::setParam(ComPortWin32::comCfg_t& ref)
 /* Description in http://vsokovikov.narod.ru/New_MSDN_API/Menage_files/fn_createfile.htm
 https://ru.wikibooks.org/wiki/COM-%D0%BF%D0%BE%D1%80%D1%82_%D0%B2_Windows_%28%D0%BF%D1%80%D0%BE%D0%B3%D1%80%D0%B0%D0%BC%D0%BC%D0%B8%D1%80%D0%BE%D0%B2%D0%B0%D0%BD%D0%B8%D0%B5%29*/
 /***********************************************************/
-HANDLE comOpenHandle(unsigned comNum)
+HANDLE ComPortWin32::openHandle(unsigned comNum)
 {
-  //if (m_hPort != INVALID_HANDLE_VALUE)
-  //  return EVT_ERR_OPENED_EARLIER;
   HANDLE hPort;
   //forming string with number of COM-port & open file
   wchar_t portNum[10] = L"\\\\.\\COM";
@@ -245,21 +243,6 @@ HANDLE comOpenHandle(unsigned comNum)
     NULL							            /*hTemplateFile = NULL for com*/
   );
   return hPort;
-  //return (INVALID_HANDLE_VALUE == m_hPort) ? EVT_ERR_CRITICAL : EVT_NO;
-}
-
-/***********************************************************/
-unsigned comGetQuantityForOpen()
-{
-  unsigned num = 0;
-  for (int i = 0; i < ComPortWin32::MAX_COM_NUM; ++i) {
-    HANDLE h = comOpenHandle(i);
-    if ( h != INVALID_HANDLE_VALUE) {
-      ++num;
-      CloseHandle(h);
-    }
-  }
-  return num;
 }
 
 /***********************************************************/
@@ -270,7 +253,7 @@ ComPortWin32::comEvtMsk_t ComPortWin32::open( unsigned comNum, comBaud_t baud )
 {
   // open of port if not opened
   if (m_hPort == INVALID_HANDLE_VALUE) {
-    m_hPort = comOpenHandle(comNum);
+    m_hPort = openHandle(comNum);
     if( INVALID_HANDLE_VALUE == m_hPort ) {
       return EVT_ERR_CRITICAL;
     }

@@ -21,7 +21,7 @@ bool TimeBase::addEvent(tBaseEvtMsk_t evtMsk)
 /**************************************************/
 void TimeBase::removeEvent(tBaseEvtMsk_t evtMsk)
 {
-	m_evtMsk = (tBaseEvtMsk_t)(m_evtMsk & (~((tBaseEvtMskInt_t)evtMsk)));
+	m_evtMsk = (tBaseEvtMsk_t)(m_evtMsk & (~evtMsk));
 }
 
 /**************************************************/
@@ -30,11 +30,11 @@ bool TimeBase::addObserver(IObsTimeBase& obs, tBaseEvtMsk_t evtMsk)
 	if (addEvent(evtMsk)) {
 		for (auto& _obs : m_observers) {
 			if (_obs.pToObs == &obs) {
-				_obs.evtMask = _obs.evtMask | evtMsk;
+				_obs.evtMsk = _obs.evtMsk | evtMsk;
 				return true;
 			}
 		}
-		timeBaseObs_t object = { &obs, evtMsk };
+		tBaseObs_t object = { &obs, evtMsk };
 		m_observers.push_back(object);
 		return true;
 	}
@@ -45,24 +45,27 @@ bool TimeBase::addObserver(IObsTimeBase& obs, tBaseEvtMsk_t evtMsk)
 void TimeBase::removeObserver(IObsTimeBase& obs)
 {
 	tBaseEvtMsk_t obsMsk = EVT_NO;
-	for (int ind = 0; ind < m_observers.size(); ++ind) {
-		if (&obs == m_observers[ind].pToObs) {
-			obsMsk = m_observers[ind].evtMask;
-			m_observers.erase(m_observers.begin() + ind);
+	std::vector<tBaseObs_t>::iterator pObs;
+
+	for (pObs = m_observers.begin(); pObs != m_observers.end(); ++pObs) {
+		if (&obs == pObs->pToObs) {
+			obsMsk = pObs->evtMsk;
+			m_observers.erase(pObs);
 			break;
 		}
 	}
+
 	bool fl = true;
 	tBaseEvtMsk_t resMsk = EVT_NO;
-	for (int ind = 0; ind < m_observers.size(); ++ind) {
-		resMsk = resMsk | m_observers[ind].evtMask;
+	for (pObs = m_observers.begin(); pObs != m_observers.end(); ++pObs) {
+		resMsk = resMsk | pObs->evtMsk;
 	}
-	removeEvent((tBaseEvtMsk_t)(obsMsk & resMsk));
+	removeEvent((tBaseEvtMsk_t)(~resMsk));
 
 }
 
 /**************************************************/
-std::vector<TimeBase::timeBaseObs_t>& TimeBase::getObservers()
+std::vector<TimeBase::tBaseObs_t>& TimeBase::getObservers()
 {
 	return m_observers;
 }
@@ -70,8 +73,8 @@ std::vector<TimeBase::timeBaseObs_t>& TimeBase::getObservers()
 /**************************************************/
 void TimeBase::notifyObservers(const tBaseEvtMsk_t evtMsk)
 {
-	for (auto obs : m_observers) {
-		tBaseEvtMskInt_t mask = obs.evtMask & evtMsk;
+	for (auto& obs : m_observers) {
+		tBaseEvtMskInt_t mask = obs.evtMsk & evtMsk;
 		if (mask) {
 			obs.pToObs->handleEvent(*this, (tBaseEvtMsk_t)mask);
 		}

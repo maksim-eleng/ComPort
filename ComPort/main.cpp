@@ -23,10 +23,8 @@ NMEA nmea(nmeaCfgEEPROM, com, sysClk);
 
 int main(int argc, char* argv[])
 {
-
 	EventSystem evt;
 	sysClk.addObserver(evt, sysClk.EVT_1S);
-
 	// NMEA class doesn't add event's object as observer.
 	// Add event system as observer for processing input string after NMEA
 	com[0].addObserver(evt);

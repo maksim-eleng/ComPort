@@ -3,6 +3,7 @@
 #include <string>
 #include <assert.h>
 #include "SysConst.h"
+#include "Observer.h"
 /*****************************************************
  * @brief Change include and using according base system.
  Win32TimeBase class working in win32 system
@@ -44,9 +45,14 @@ public:
 	// For Observer
 	typedef struct {
 		IObsTimeBase* pToObs;		// pointer to observer
-		tBaseEvtMsk_t evtMask;	// mask for generation event for this observer
-	}timeBaseObs_t;
+		tBaseEvtMsk_t evtMsk;	// mask for generation event for this observer
+	}tBaseObs_t;
 
+
+	/*******************************************************************
+	* @brief Create object by default.
+	********************************************************************/
+	TimeBase()	{}
 
 	/*******************************************************************
 	 * @brief Create object.
@@ -54,21 +60,7 @@ public:
 	 *				May be set as (EVT_1MS | EVT_10US).  The minimum period of 
 	 *				event must be >= then SysConst::clkTimeBase
 	********************************************************************/
-	TimeBase(tBaseEvtMsk_t evtMask = EVT_1MS);
-
-	/******************************************************************
-	* @brief Add event mask for generate timer's events.
-	* @param evtMsk <tBaseEvtMsk_t> - mask of event. May be set as EVT_10US | EVT_10US
-	* @return	true - ok
-	*					false - desired mask < SysConst::clkTimeBase and can't be set
-	*******************************************************************/
-	bool addEvent(tBaseEvtMsk_t evtMsk);
-
-	/******************************************************************
-	* @brief Remove event mask for generate timer's events.
-	* @param evtMsk <tBaseEvtMsk_t> - mask of event for delete. May be set as EVT_10US | EVT_10US
-	*******************************************************************/
-	void removeEvent(tBaseEvtMsk_t evtMsk);
+	TimeBase(tBaseEvtMsk_t evtMask);
 
 	/*******************************************************************
 	 * @brief	Add observer for event to another objects.
@@ -79,6 +71,7 @@ public:
 	 *					false - desired mask < SysConst::clkTimeBase and can't be set
 	********************************************************************/
 	bool addObserver(IObsTimeBase& obs, tBaseEvtMsk_t evtMsk);
+	
 
 	/*******************************************************************
 	 * @brief Remove observer form TimeBase object
@@ -90,15 +83,7 @@ public:
 	* @brief Get observers vector for TimeBase object  
 	* @return 
 	********************************************************************/
-	std::vector<timeBaseObs_t>& getObservers();
-
-	/**********************************************
-	 * @brief Notify observers from m_observers list, if observer
-	 * was subscribed to event
-	 * @param events <obsEvtCode_t> - mask for events that occured 
-								(reason of call. May be used by observer for hanle the event
-	***********************************************/
-	void notifyObservers(const tBaseEvtMsk_t events);
+	std::vector<tBaseObs_t>& getObservers();
 
 	/*******************************************************************
 	 * @brief Main loop using from parent class SysTimeBase_t.
@@ -130,7 +115,7 @@ private:
 	tBaseEvtMsk_t m_evtMsk = EVT_NO;
 
 	// object Observers 
-	std::vector<timeBaseObs_t>m_observers;
+	std::vector<tBaseObs_t>m_observers;
 	
 	// for system time
 	struct SYS_TIME_STRUCT {
@@ -145,6 +130,29 @@ private:
 	// for forming system tyme in string format
 	std::string m_timeStr = "";
 	std::string m_dateStr = "";
+
+
+	/******************************************************************
+	* @brief Add event mask for generate timer's events.
+	* @param evtMsk <tBaseEvtMsk_t> - mask of event. May be set as EVT_10US | EVT_10US
+	* @return	true - ok
+	*					false - desired mask < SysConst::clkTimeBase and can't be set
+	*******************************************************************/
+	bool addEvent(tBaseEvtMsk_t evtMsk);
+
+	/******************************************************************
+	* @brief Remove event mask for generate timer's events.
+	* @param evtMsk <tBaseEvtMsk_t> - mask of event for delete. May be set as EVT_10US | EVT_10US
+	*******************************************************************/
+	void removeEvent(tBaseEvtMsk_t evtMsk);
+
+	/**********************************************
+	* @brief Notify observers from m_observers list, if observer
+	* was subscribed to event
+	* @param events <obsEvtCode_t> - mask for events that occured 
+	(reason of call. May be used by observer for hanle the event
+	***********************************************/
+	void notifyObservers(const tBaseEvtMsk_t events);
 
 	/******************************************************************
 	 * @brief	*** Event handler for inherited TimeBase_t (like us TimeBaseWin32) class
@@ -183,8 +191,6 @@ private:
 };
 
 
-
-
 /*********************************************************************
  * @brief Interface class for events organization for observers.
  * TimeBase objects (this observable class) must add observer throught
@@ -203,3 +209,4 @@ public:
 
 	virtual void handleEvent(TimeBase&, TimeBase::tBaseEvtMsk_t) = 0;
 };
+
