@@ -51,27 +51,32 @@ NMEA::NMEA(nmeaCfgEEPROM_t& cfgEEPROM, std::vector<ComPort>& com, TimeBase& sysC
 	m_numOfTerminalChannel = cfgEEPROM.numOfTerminalChannel;
 
 	sysClk.addObserver(*this, sysClk.EVT_1S);
+
 	// Creates of ports
-	for (unsigned ch = 0; ch < SysConst::maxUARTChannel; ++ch) {
+	comCfg_t cfg;
+	cfg.byteSize = 8;
+	cfg.parity = ComPort::P_NO;
+	cfg.stopBits = ComPort::SBIT_ONE;
+	cfg.evtChar = '\n';
+	unsigned ch = 0;
+	unsigned startComNum = 0;
+
+	m_com.reserve(SysConst::maxUARTChannel);
+	for (unsigned i=0; i < SysConst::maxUARTChannel; ++i) {
 		comEvtMsk_t events;
-		m_com.push_back(ComPort(sysClk));
-		m_com[ch].addObserver(*this);
-		events = m_com[ch].open(ch, m_flags[ch].BautRate);
+		m_com.emplace_back(sysClk);
+		events = m_com[ch].openFirstFree(startComNum, m_flags[i].BautRate);
 		if (ComPort::EVT_NO == events) {
-			comCfg_t cfg;
-			cfg.byteSize = 8;
-			cfg.parity = ComPort::P_NO;
-			cfg.stopBits = ComPort::SBIT_ONE;
-			cfg.evtChar = '\n';
 			events = m_com[ch].setParam(cfg);
-			if (ComPort::EVT_NO == events) {
-			}
+			m_com[ch].addObserver(*this);
+			++ch;
 		}
 		else {
-//			m_com.erase(m_com.begin() + ch);
+			m_com.pop_back();
+			break;
 		}
 	}
-
+	m_com.shrink_to_fit();
 }
 
 /************************************************************/
@@ -82,7 +87,7 @@ void NMEA::setCfgDefault(nmeaCfgEEPROM_t& cfgEEPROM, char ch)
 	// set baud 38400 for terminal channel and 4800 for another
 	if (isTerminalCh) 
 		//chCfg.BautRate = ComPort::B_38400;
-		chCfg.BautRate = ComPort::B_4800;
+		chCfg.BautRate = ComPort::B_4800; // временно
 	else 
 		chCfg.BautRate = ComPort::B_4800;
 
@@ -181,11 +186,9 @@ void NMEA::formingStr()
 void NMEA::handleEvent(TimeBase& ref, TimeBase::tBaseEvtMsk_t evtMsk)
 {
 	if (evtMsk & ref.EVT_1S) {
-		ComPort* terminal = &m_com[m_numOfTerminalChannel +1];
-		std::cout << '\n' << ref.getTime() << '\t' << ref.getDate() << '\n';
-		terminal->print("$GPRMC,101530.32,A,2726.68,S,15307.56,E,012,032,050620,11,E*63\r\n");
-		terminal->print("$GPGGA,101525.83,2726.68,S,15307.56,E,1,4,002,+15,M,046,M,,*71\r\n");
-		terminal->print("$GPGNS,104757.19,2726.68,S,15307.56,E,,6,002,15,046,,*73\r\n");
+		m_com[m_numOfTerminalChannel].print("$GPRMC,101530.32,A,2726.68,S,15307.56,E,012,032,050620,11,E*63\r\n");
+		m_com[m_numOfTerminalChannel].print("$GPGGA,101525.83,2726.68,S,15307.56,E,1,4,002,+15,M,046,M,,*71\r\n");
+		m_com[m_numOfTerminalChannel].print("$GPGNS,104757.19,2726.68,S,15307.56,E,,6,002,15,046,,*73\r\n");
 	}
 }
 

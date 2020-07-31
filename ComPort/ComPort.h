@@ -40,7 +40,6 @@ public:
 	* @param sizeTxBuf:<int> - size of Tx buffer. If not set - MIN_BUFFER_SIZE
 	************************************************************/
 	ComPort(TimeBase& sysClk,
-		char* const pRxBuf = nullptr, char* const pTxBuf = nullptr,
 		int sizeRxBuf = SysConst::rxBufSize, int sizeTxBuf = SysConst::txBufSize);
 
 #else
@@ -60,11 +59,25 @@ public:
 
 #endif
 
+	/********************************************************
+	* @brief Deleted constructors
+	*********************************************************/
+	ComPort() = delete;
+
+	ComPort(const ComPort&) = delete;
+
+	ComPort& operator=(const ComPort&) = delete;
+
+	/********************************************************
+	* @brief *****		For mov semantics		******************
+	*********************************************************/
+	ComPort(ComPort&& com) = default;
+
+	ComPort& operator=(ComPort&&) = default;
 
 	/***********************************************************
 	 * @brief Delete ComPort object.
-	 * All observers of port are deleted. If port was subscribed to 
-	 * sysClock - unsubscribe.
+	 * All observers of port are deleted. 
 	 * Additionally see descriptor in SysComPort_t path
 	************************************************************/
 	~ComPort();
@@ -180,8 +193,6 @@ private:
 	// as number of channel of port. Init where object is created and
 	// must be in range 0...
 	uint8_t m_numOfChannel;
-	// for detect number of created objects
-	static uint8_t m_numOfObject;
 
 	/**********************************************
 	 * @brief Notify observers from m_observers list

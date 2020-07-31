@@ -1,16 +1,12 @@
 #include "EventSystem.h"
 #include <iostream>
 
-extern ComPort* terminal;
 
 /**************************************************************/
 void EventSystem::handleEvent(TimeBase& ref, TimeBase::tBaseEvtMsk_t evtMsk)
 {
 	if (evtMsk & ref.EVT_1S) {
 		std::cout << '\n' << ref.getTime() << '\t' << ref.getDate() << '\n';
-		terminal->print("$GPRMC,101530.32,A,2726.68,S,15307.56,E,012,032,050620,11,E*63\r\n");
-		terminal->print("$GPGGA,101525.83,2726.68,S,15307.56,E,1,4,002,+15,M,046,M,,*71\r\n");
-		terminal->print("$GPGNS,104757.19,2726.68,S,15307.56,E,,6,002,15,046,,*73\r\n");
 	}
 }
 

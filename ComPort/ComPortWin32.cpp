@@ -2,6 +2,62 @@
 
 #ifdef _WIN32
 #include <assert.h>
+#include <iostream>
+
+uint8_t ComPortWin32::m_numOfObject = 0;
+
+
+/********************************************************
+* @brief *****		For mov semantics		******************
+*********************************************************/
+ComPortWin32::ComPortWin32(ComPortWin32&& com) noexcept
+{
+  *this = std::move(com);
+}
+
+/*********************************************************/
+ComPortWin32& ComPortWin32::operator=(ComPortWin32&& com) noexcept
+{
+  if (this == &com)
+    return *this;
+  // destructer will be called after move operation and --m_numOfObject in destructor
+  ++m_numOfObject;
+  // move or copy all variables
+  m_rxBuf = std::move(com.m_rxBuf);
+  m_txBuf = std::move(com.m_txBuf);
+  m_cfg = com.m_cfg;
+  m_rxOverlap = com.m_rxOverlap;					
+  m_hPort = com.m_hPort;
+  m_evtCharCnt = com.m_evtCharCnt;
+  m_pSysClk = com.m_pSysClk;
+  // delete old port from sysClk and add new
+  com.m_pSysClk->removeObserver(com);
+  m_pSysClk->addObserver(*this, TimeBase::EVT_10MS);
+  return *this;
+}
+
+
+
+
+/***********************************************************/
+ComPortWin32::ComPortWin32(TimeBase& sysClk,
+  int sizeRxBuf, int sizeTxBuf)
+  :m_rxBuf(sizeRxBuf), m_txBuf(sizeTxBuf)
+{
+  std::cout << "ComWin32 constructor. & = " << this << "\n";
+  m_pSysClk = &sysClk;
+  ++m_numOfObject;
+}
+
+/***********************************************************/
+ComPortWin32::~ComPortWin32()
+{
+  std::cout << "ComWin32 destructor. & = " << this << " destroyed.\n";
+  --m_numOfObject;
+  if(!m_numOfObject)
+    close();
+}
+
 
 /***********************************************************/
 ComPortWin32::comEvtSetMsk_t operator|(ComPortWin32::comEvtSetMsk_t l, ComPortWin32::comEvtSetMsk_t r)
@@ -162,12 +218,10 @@ ComPortWin32::comEvtMsk_t ComPortWin32::setParam(ComPortWin32::comCfg_t& ref)
 /* Description in http://vsokovikov.narod.ru/New_MSDN_API/Menage_files/fn_createfile.htm
 https://ru.wikibooks.org/wiki/COM-%D0%BF%D0%BE%D1%80%D1%82_%D0%B2_Windows_%28%D0%BF%D1%80%D0%BE%D0%B3%D1%80%D0%B0%D0%BC%D0%BC%D0%B8%D1%80%D0%BE%D0%B2%D0%B0%D0%BD%D0%B8%D0%B5%29*/
 /***********************************************************/
-ComPortWin32::comEvtMsk_t ComPortWin32::open( int comNum, comBaud_t baud )
+ComPortWin32::comEvtMsk_t ComPortWin32::open(unsigned comNum)
 {
-  close();
-
-  bool fPortReady( true );
-  comEvtMsk_t events = EVT_NO;
+  if (m_hPort != INVALID_HANDLE_VALUE)
+    return EVT_ERR_OPENED_EARLIER;
 
   //forming string with number of COM-port & open file
   wchar_t portNum[10] = L"\\\\.\\COM";
@@ -190,15 +244,43 @@ ComPortWin32::comEvtMsk_t ComPortWin32::open( int comNum, comBaud_t baud )
                                   /FILE_FLAG_OVERLAPPED - for asynchronous*/
     NULL							            /*hTemplateFile = NULL for com*/
   );
-  if( INVALID_HANDLE_VALUE == m_hPort ) {
-    setEvent(events, EVT_ERR_CRITICAL);
+  return (INVALID_HANDLE_VALUE == m_hPort) ? EVT_ERR_CRITICAL : EVT_NO;
+}
+
+/***********************************************************/
+unsigned ComPortWin32::getQuantityForOpen()
+{
+  unsigned num = 0;
+  HANDLE tmpHandle = m_hPort;
+  for (int i = 0; i < ComPortWin32::MAX_COM_NUM; ++i) {
+    m_hPort = INVALID_HANDLE_VALUE;
+    if ( open(i) == EVT_NO) {
+      ++num;
+      CloseHandle(m_hPort);
+    }
+  }
+  m_hPort = tmpHandle;
+  return num;
+}
+
+/***********************************************************/
+/* Description in http://vsokovikov.narod.ru/New_MSDN_API/Menage_files/fn_createfile.htm
+https://ru.wikibooks.org/wiki/COM-%D0%BF%D0%BE%D1%80%D1%82_%D0%B2_Windows_%28%D0%BF%D1%80%D0%BE%D0%B3%D1%80%D0%B0%D0%BC%D0%BC%D0%B8%D1%80%D0%BE%D0%B2%D0%B0%D0%BD%D0%B8%D0%B5%29*/
+/***********************************************************/
+ComPortWin32::comEvtMsk_t ComPortWin32::open( unsigned comNum, comBaud_t baud )
+{
+  bool fPortReady( true );
+  comEvtMsk_t events;
+
+  // open of port
+  events = open(comNum);
+  if( EVT_NO != events ) {
+    //setEvent(events, EVT_ERR_CRITICAL);
     return events;
   }
 
   // Set recomendation buffer's size (rx/tx)
-  if( fPortReady ) {
-    fPortReady = SetupComm( m_hPort, (m_rxBuf.getBufSize() * 2), (m_txBuf.getBufSize() * 2) );
-  }
+  fPortReady = SetupComm( m_hPort, (m_rxBuf.getBufSize() * 2), (m_txBuf.getBufSize() * 2) );
   
   // set timeouts for not delay
   if( fPortReady ) {
@@ -250,20 +332,22 @@ ComPortWin32::comEvtMsk_t ComPortWin32::open( const char* const comName, comBaud
 }
 
 /***********************************************************/
+ComPortWin32::comEvtMsk_t ComPortWin32::openFirstFree(unsigned& startComNum, comBaud_t baud)
+{
+  comEvtMsk_t evt = EVT_ERR_CRITICAL;
+  for (; evt && startComNum < MAX_COM_NUM; ++startComNum)
+    evt = open(startComNum, baud);
+  return evt;
+}
+
+/***********************************************************/
 void ComPortWin32::close()
 {
   if (m_hPort != INVALID_HANDLE_VALUE) {
     CloseHandle(m_hPort);
     m_hPort = INVALID_HANDLE_VALUE;
-    m_rxBuf.resetIndex();
-    m_txBuf.resetIndex();
-    m_evtCharCnt = 0;
-    m_rxOverlap = { 0 };
-  }
-  if (m_pSysClk) {
     m_pSysClk->removeObserver(*this);
   }
-
 }
 
 /***********************************************************/
@@ -272,7 +356,7 @@ ComPortWin32::comEvtMsk_t ComPortWin32::reopen()
   comEvtMsk_t evt; 
   evt = open(m_cfg.number, m_cfg.baud);
   if (EVT_NO == evt) {
-    setParam(m_cfg);
+    evt = setParam(m_cfg);
   }
   return evt;
 }
@@ -304,20 +388,6 @@ int ComPortWin32::getPortNumber() const
 int ComPortWin32::getBaud() const
 {
   return m_cfg.baud;
-}
-
-/***********************************************************/
-ComPortWin32::ComPortWin32(TimeBase& sysClk, char* const pRxBuf, char* const pTxBuf,
-  int sizeRxBuf, int sizeTxBuf)
-  :m_rxBuf(pRxBuf, sizeRxBuf), m_txBuf(pTxBuf, sizeTxBuf)
-{
-  m_pSysClk = &sysClk;
-}
-
-/***********************************************************/
-ComPortWin32::~ComPortWin32()
-{
-  close();
 }
 
 /******************************************************/
@@ -355,7 +425,7 @@ ComPortWin32::comEvtMsk_t ComPortWin32::startTx()
     while (len < sizeof(buf))
     {
       data = m_txBuf.get(index);
-      if (data != bufResultNG) {
+      if (data != Buffer::resultNG) {
         buf[len] = data;
         ++len;
       }
@@ -400,7 +470,7 @@ bool ComPortWin32::print(const char* cstr)
     int res;
     bool fPutTerm = false;
     res = m_txBuf.put(cstr, m_cfg.evtChar);
-    if (bufResultNG == res) {
+    if (Buffer::resultNG == res) {
       setEvent(evt, EVT_ERR_TX);
     }
     else {
@@ -451,8 +521,6 @@ ComPortWin32::comEvtMsk_t ComPortWin32::checkCoreEvents()
       else {
         if ( ERROR_IO_PENDING == GetLastError())
           state = pending;
-        else
-          setEvent(events, EVT_ERR_CRITICAL);
       }  
     break;
     case pending:
@@ -501,7 +569,7 @@ ComPortWin32::comEvtMsk_t ComPortWin32::checkCoreEvents()
           int byte;
           byte = m_rxBuf.put(buf[i]);
           // if buffer is overflow - correction buffer and set events
-          if (byte == bufResultNG) {
+          if (byte == Buffer::resultNG) {
             setEvent(events, EVT_ERR_RX_BUF_OVF);
             break;
           }

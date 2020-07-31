@@ -17,11 +17,10 @@
 #define BUF_TYPE_LINEAR
 #endif
 
-#define bufResultNG			-1
-#define BUF_NOT_CFG			-1
-
 // minimum buffer size. default for dynamic data
+#ifndef MIN_BUF_SIZE
 #define MIN_BUF_SIZE	256
+#endif
 
 // disable/enuble interrupt for controller system
 #ifndef DISABLE_INTERRUPT
@@ -37,18 +36,35 @@ class Buffer
 /*****			PUBLIC SECTION			 ******/
 public:
 
+	static constexpr auto resultNG = -1;
+	static constexpr auto notCfg = -1;
+
 	/****************************************************
-	 * @brief	Constructor. By default create buffer with MIN_BUFFER_SIZE size
-	 * @param buf <char*> - external buffer. If not defined or ==0 - dynamic memory allocation with size=size
+	 * @brief	Constructor. Create buffer dynamically. By default with MIN_BUFFER_SIZE size
 	 * @param size <int> - size of buffer
 	 * @Create of object:	Buffer buf;	Buffer buf(NULL); - dynamic memory allocation with size=MIN_BUFFER_SIZE
 	 *										Buffer buf(NULL, 100); - dynamic memory allocation with size=100
-	 *										Buffer buf(buffer, sizeof(buffer)); - for external buffer.
 	*****************************************************/
-	Buffer(char* buf = 0, int size = MIN_BUF_SIZE);
+	Buffer(unsigned size = MIN_BUF_SIZE);
 
-	// Copying of objects is prohibited
- 	//Buffer(const Buffer& buf) = delete;
+	// Constructor of copy
+	Buffer(const Buffer& buf);
+
+	// Constructor for move
+	Buffer(Buffer&& buf) noexcept;
+	/**
+	 * @brief 
+	 * @param buf 
+	 * @return 
+	*/
+	const Buffer& operator=(const Buffer& buf);
+	
+	/**
+	 * @brief 
+	 * @param buf 
+	 * @return 
+	*/
+	const Buffer& operator=(Buffer&& buf) noexcept;
 
 	/****************************************************
 	 * @brief	Destructor. If nenory for buffer was allocated dynamically - release
@@ -178,6 +194,12 @@ public:
 	************************************************************/
 	void resetIndex();
 
+	/***********************************************************
+	* @brief Copy all buffer's index from source buffer. 
+	* Must be used in copy, move constructors
+	************************************************************/
+	void copyIndex(const Buffer& srcBuf);
+
 	/****   Operators overflow	******/
 
 	/***********************************************************
@@ -225,12 +247,6 @@ public:
 	 *						found before buffer is empty
 	*****************************************************/
 	int operator=(std::string& str);
-
-	/****************************************************
-	* @brief	Copying of objects is prohibited,
-	* including copy constructor
-	*****************************************************/
-	Buffer& operator=(const Buffer& buf) = delete;
 
 	/***********************************************************
 	* @brief operator+= group is similar of put()
@@ -360,8 +376,7 @@ private:
 	#endif
 	// size of buffer
 	int m_size = 0;						// size of buffer
-	char* m_data = nullptr;		// pointer to data area (may be dynamically or external)
-	bool isDynamic_m_data = false;	// =1 - the memory for buffer has been allocated dynamically
+	char* m_data = nullptr;		// pointer to data area
 
 	/**********   Functions   ************/
 	/***************************************************************/

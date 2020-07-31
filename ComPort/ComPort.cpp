@@ -1,19 +1,16 @@
 #include "ComPort.h"
 #include "utility.h"
+#include <iostream>
 
 /************************************************************/
-
-uint8_t ComPort::m_numOfObject = 0;
 
 
 #if RX_DATA_DETECT_METHOD == PERIODICALLY_INTERROGATION
 
-ComPort::ComPort(TimeBase& sysClk, char* const pRxBuf, char* const pTxBuf,
-  int sizeRxBuf, int sizeTxBuf)
-  :SysComPort_t(sysClk, pRxBuf, pTxBuf, sizeRxBuf, sizeTxBuf)
-{
-	m_numOfChannel = m_numOfObject++;
-}
+ComPort::ComPort(TimeBase& sysClk, int sizeRxBuf, int sizeTxBuf)
+  :SysComPort_t(sysClk, sizeRxBuf, sizeTxBuf),
+	m_numOfChannel(SysComPort_t::m_numOfObject)
+{}
 
 #else
 
@@ -29,11 +26,12 @@ ComPort::ComPort(char* const pRxBuf, char* const pTxBuf, int sizeRxBuf, int size
 /************************************************************/
 ComPort::~ComPort()
 {
+	std::cout << "Destructor for com.\n";
   m_observers.clear();
 }
 
 /**************************************************************/
-bool ComPort::print(std::string str)
+bool ComPort::print(std::string str) 
 {
 	return SysComPort_t::print(str.c_str());
 }

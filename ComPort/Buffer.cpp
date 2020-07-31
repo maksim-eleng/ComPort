@@ -1,34 +1,77 @@
 #include "Buffer.h"
-
 #include <cassert>
+
 #include <iostream>
 
 
 /**********************************************************/
-Buffer::Buffer(char* buf, int size)
-	: m_data(buf), m_size(size)
+Buffer::Buffer(unsigned size)
+	: m_size(size),
+	m_data(new (std::nothrow) char[size])
 {
-	std::cout << "buf constructor\n";
+	std::cout << "Buf constructor. &buf=" << this << "\n";
 
-	assert(m_size && "Buffer's size = 0");
-	// the index can't occupy a signed bit
-	assert((m_size > sizeof(size) * 4) && "Size is big");
-	if (!m_data) {
-		m_data = new (std::nothrow) char[m_size];
-		if (!m_data)	return;
-		isDynamic_m_data = true;
-	}
+	if (!m_data)	
+		exit(1);
 	resetIndex();
+}
+
+/**********************************************************/
+Buffer::Buffer(const Buffer& buf)
+	:m_data(new (std::nothrow) char[buf.m_size])
+{
+	std::cout << "Copy constructor of buffer. *" << this << " = *" << &buf << "\n";
+	if (!m_data)	
+		exit(1);
+	copyIndex(buf);
+	memcpy(this->m_data, buf.m_data, sizeof(this->m_data));
+}
+
+/**********************************************************/
+Buffer::Buffer(Buffer&& buf) noexcept
+{
+	std::cout << "Move constructor of buffer. *" << this << " = *" << &buf << "\n";
+	delete[] m_data;
+	m_data = buf.m_data;
+	buf.m_data = nullptr;
+	copyIndex(buf);
+}
+
+/**********************************************************/
+const Buffer& Buffer::operator=(const Buffer& buf)
+{
+	std::cout << "Copy operator= of buffer. *" << this << " = *" << &buf << "\n";
+
+	if (this == &buf)
+		return *this;
+	delete[] m_data;
+	m_data = new (std::nothrow) char[buf.m_size];
+	copyIndex(buf);
+	memcpy(this->m_data, buf.m_data, sizeof(this->m_data));
+	return *this;
+}
+
+/**********************************************************/
+const Buffer& Buffer::operator=(Buffer&& buf) noexcept
+{
+	std::cout << "Move operator= of buffer. *" << this << " = *" << &buf << "\n";
+
+	if (this == &buf)
+		return *this;
+	delete[] m_data;
+	copyIndex(buf);
+	m_data = buf.m_data;
+	buf.m_data = nullptr;
+	return *this;
 }
 
 /**********************************************************/
 Buffer::~Buffer()
 {
-	std::cout << "buf destructor\n";
-	if (isDynamic_m_data) {
-		delete[]m_data;
-		m_data = nullptr;
-	}
+	std::cout << "Buf destructor. &buf=" << this << " destroyed.\n";
+
+	delete[]m_data;
+	m_data = nullptr;
 }
 
 /**********************************************************/
@@ -44,7 +87,7 @@ int Buffer::put(char byte)
 	else {
 		// overflow
 		ENABLE_INTERRUPT;
-		return bufResultNG;
+		return resultNG;
 	}
 	ENABLE_INTERRUPT;
 	return m_front;
@@ -75,8 +118,8 @@ int Buffer::put(const char* str, char eofChar)
 	assert(str);
 	int i = 0;
 	int ind = m_front;
-	char data = BUF_NOT_CFG;
-	int res = bufResultNG;
+	char data = notCfg;
+	int res = resultNG;
 
 	while (str[i] == '\0') { ++i; }
 
@@ -84,15 +127,15 @@ int Buffer::put(const char* str, char eofChar)
 		data = str[i];
 		res = put(data);
 		++i;
-		if (res == bufResultNG) {
+		if (res == resultNG) {
 			break;
 		}
 	}
 	if (eofChar == '\0' && str[i] == '\0')
 		res = put('\0');
-	if (res == bufResultNG) {
+	if (res == resultNG) {
 		setIndexForWrite(ind);
-		return bufResultNG;
+		return resultNG;
 	}
 	return m_front;
 }
@@ -118,7 +161,7 @@ char Buffer::get()
 		ENABLE_INTERRUPT;
 		return byte;
 	}
-	return bufResultNG;
+	return resultNG;
 
 	#elif defined BUF_TYPE_CYCLICAL
 	char byte;
@@ -141,14 +184,14 @@ char Buffer::get()
 char Buffer::get(int& index)
 {
 	#ifdef BUF_TYPE_LINEAR
-	char data = bufResultNG;
+	char data = resultNG;
 	if (index < m_front)
 	{
 		data = m_data[index];
 		++index;
 		return data;
 	}
-	return bufResultNG;
+	return resultNG;
 
 	#elif defined BUF_TYPE_CYCLICAL
 	char data = bufResultNG;
@@ -175,9 +218,9 @@ int Buffer::get(char* str, int sizeStr, char eofChar)
 	--sizeStr;
 	while (data == '\0') {
 		data = get();
-		if (data == bufResultNG) {
+		if (data == resultNG) {
 			setIndexForRead(ind);
-			return bufResultNG;
+			return resultNG;
 		}
 	}
 	str[i] = data;
@@ -185,10 +228,10 @@ int Buffer::get(char* str, int sizeStr, char eofChar)
 
 	while (data != eofChar && data != '\0') {
 		data = get();
-		if (i == sizeStr || data == bufResultNG) {
+		if (i == sizeStr || data == resultNG) {
 			str[i] = '\0';
 			setIndexForRead(ind);
-			return bufResultNG;
+			return resultNG;
 		}
 		str[i] = data;
 		++i;
@@ -209,18 +252,18 @@ int Buffer::get(std::string& str, char eofChar)
 
 	while (data == '\0') {
 		data = get();
-		if (data == bufResultNG) {
+		if (data == resultNG) {
 			setIndexForRead(ind);
-			return bufResultNG;
+			return resultNG;
 		}
 	}
 	str.push_back(data);
 
 	while (data != eofChar && data != '\0') {
 		data = get();
-		if (data == bufResultNG) {
+		if (data == resultNG) {
 			setIndexForRead(ind);
-			return bufResultNG;
+			return resultNG;
 		}
 		str.push_back(data);
 	}
@@ -305,6 +348,19 @@ void Buffer::resetIndex()
 }
 
 /*****************************************************/
+void Buffer::copyIndex(const Buffer& srcBuf)
+{
+	DISABLE_INTERRUPT;
+	m_front = srcBuf.m_front;
+	m_end = srcBuf.m_end;
+	m_size = srcBuf.m_size;
+#ifdef BUF_TYPE_CYCLICAL
+	m_len = srcBuf.m_len;
+#endif
+	ENABLE_INTERRUPT;
+}
+
+/*****************************************************/
 int Buffer::operator=(const char byte)
 {
 	resetIndex();
@@ -356,7 +412,7 @@ int Buffer::search(char byte)
 		if (byte == get(point))
 			return tmp_p;
 	}
-	return bufResultNG;
+	return resultNG;
 }
 
 /*****************************************************/
@@ -366,7 +422,8 @@ int Buffer::search(const char* str, int pStartInBuf, bool isReturnIndAfterStr)
 	if (!pStartInBuf || pStartInBuf < m_end)
 		pStartInBuf = m_end;
 	int pFirstInStr = pStartInBuf;
-	int tmp_p, i = 0;
+	int tmp_p; 
+	int i = 0;
 	bool res = false;
 	while (str[i] != '\0' && pStartInBuf != m_front) {
 		tmp_p = pStartInBuf;
@@ -385,7 +442,7 @@ int Buffer::search(const char* str, int pStartInBuf, bool isReturnIndAfterStr)
 		return (isReturnIndAfterStr) ? pStartInBuf : pFirstInStr;
 	}
 	else {
-		return bufResultNG;
+		return resultNG;
 	}
 }
 
@@ -398,7 +455,7 @@ bool Buffer::copyStrTo(Buffer& dstBuf, char eofChar)
 
 	while (data == '\0') {
 		data = get(end);
-		if (data == bufResultNG) {
+		if (data == resultNG) {
 			return false;
 		}
 	}
@@ -406,7 +463,7 @@ bool Buffer::copyStrTo(Buffer& dstBuf, char eofChar)
 
 	while (data != eofChar && data != '\0') {
 		data = get(end);
-		if (data == bufResultNG) {
+		if (data == resultNG) {
 			dstBuf.setIndexForWrite(front);
 			return false;
 		}
@@ -424,7 +481,7 @@ bool Buffer::transferStrTo(Buffer& dstBuf, char eofChar)
 
 	while (data == '\0') {
 		data = get();
-		if (data == bufResultNG) {
+		if (data == resultNG) {
 			setIndexForRead(end);
 			return false;
 		}
@@ -433,7 +490,7 @@ bool Buffer::transferStrTo(Buffer& dstBuf, char eofChar)
 
 	while (data != eofChar && data != '\0') {
 		data = get();
-		if (data == bufResultNG) {
+		if (data == resultNG) {
 			setIndexForRead(end);
 			dstBuf.setIndexForWrite(front);
 			return false;

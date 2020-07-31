@@ -31,15 +31,36 @@ bool convStrToInt(const char* str, int& res)
 		++ind;
 	while (str[ind] != '\0') {
 		tmpRes *= 10;
-		if (str[ind] < '0' || str[ind] > '9')
-			return 0;
 		tmpRes += str[ind] - '0';
-		if (tmpRes > INT_MAX)
+		if (tmpRes > INT_MAX || str[ind] < '0' || str[ind] > '9') {
+			res = 0;
 			return false;
+		}
 		++ind;
 	}
 	res = tmpRes;
 	if (str[0] == '-')
 		res = -res;
 	return true;
+}
+
+/***********************************************/
+bool convStrToInt(std::string& str, int& res)
+{
+	return convStrToInt(str.c_str(), res);
+}
+
+/***********************************************/
+std::vector<int> convArgumentsOfMainToInt(int argc, char* argv[])
+{
+	std::vector<int>res;
+	// first of argument can not be integer
+	if (argc > 1) {
+		int intRes = -1;
+		for (int i = 0; i < argc; ++i) {
+			convStrToInt(argv[i], intRes);
+			res.emplace_back(intRes);
+		}
+	}
+	return std::move(res);
 }

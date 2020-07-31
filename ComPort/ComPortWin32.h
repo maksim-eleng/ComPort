@@ -4,7 +4,7 @@
 
 #include "Buffer.h"
 #include "TimeBase.h"
-
+#include <iostream>
 
 // if interrupts for Rx data from port is not available, for receive
 // data periodically interrogation must be used.
@@ -15,7 +15,8 @@ class ComPortWin32: public IObsTimeBase
 {
 public:
 
-	static constexpr auto COM_NOT_CFG = -1;
+	static constexpr char COM_NOT_CFG = -1;
+	static constexpr char MAX_COM_NUM = 50;
 
 	/************************************************************
 	 * @brief Com port event masks. Must be set by means of setEvent()
@@ -43,6 +44,9 @@ public:
 		EVT_ERR_INVALID_PARAM	= (1 << 7),
 		// Critical errors as com not ready, not open, not handle,...
 		EVT_ERR_CRITICAL			= (1 << 8),
+		// Port was opened earlier. Set in open()
+		EVT_ERR_OPENED_EARLIER= (1 << 9),
+
 		EVT_END								= EVT_ERR_CRITICAL,
 	}comEvtMsk_t;
 	 
@@ -181,6 +185,23 @@ public:
 		}
 	};
 
+	/********************************************************
+	 * @brief Deleted constructors
+	*********************************************************/
+	ComPortWin32() = delete;
+
+	ComPortWin32(const ComPortWin32&) = delete;
+
+	ComPortWin32& operator=(const ComPortWin32&) = delete;
+	
+	/********************************************************
+	 * @brief *****		For mov semantics		******************
+	 *********************************************************/
+	ComPortWin32(ComPortWin32&& com) noexcept;
+
+	ComPortWin32& operator=(ComPortWin32&& com) noexcept;
+
+
 	// operator | for set events mask us EVTSET_RX_CHAR | EVTSET_RX_USER_CHAR
 	// Using when setting up when setParam() used
 	friend comEvtSetMsk_t operator|(comEvtSetMsk_t l, comEvtSetMsk_t r);
@@ -202,17 +223,35 @@ public:
 	/**************************************************************
 	* @brief Open COM-port.
 	* Parameters will be set letter via setParam() function
+	* Number of port will be save in class.
 	* Creates a file descriptor. 
 	* Timings set as: for Read 1 char - max, the rest coeffichience - 0
 	* (for without delays and wait operation).
 	* Description in http ://vsokovikov.narod.ru/New_MSDN_API/Menage_files/fn_createfile.htm
 	* https://ru.wikibooks.org/wiki/COM-%D0%BF%D0%BE%D1%80%D1%82_%D0%B2_Windows_%28%D0%BF%D1%80%D0%BE%D0%B3%D1%80%D0%B0%D0%BC%D0%BC%D0%B8%D1%80%D0%BE%D0%B2%D0%B0%D0%BD%D0%B8%D0%B5%29
-	* @param comNum	<int> - number of com port
+	* @param comNum	<unsigned> - number of com port
 	* @param baud		<comBaud_t> - BaudRate. The BAUD_ENUM must be used
 	* @return				<evtMask_t> EVT_NO (0) - if OK, 
 									or EVT_ERR_CRITICAL and port handler is closed
 	***************************************************************/
-	comEvtMsk_t open( int comNum, comBaud_t baud);
+	comEvtMsk_t open( unsigned comNum, comBaud_t baud);
+
+	/**************************************************************
+	* @brief Open the first free COM-port.
+	* Parameters will be set letter via setParam() function.
+	* Number of port will be save in class.
+	* Creates a file descriptor. 
+	* Timings set as: for Read 1 char - max, the rest coeffichience - 0
+	* (for without delays and wait operation).
+	* Description in http ://vsokovikov.narod.ru/New_MSDN_API/Menage_files/fn_createfile.htm
+	* https://ru.wikibooks.org/wiki/COM-%D0%BF%D0%BE%D1%80%D1%82_%D0%B2_Windows_%28%D0%BF%D1%80%D0%BE%D0%B3%D1%80%D0%B0%D0%BC%D0%BC%D0%B8%D1%80%D0%BE%D0%B2%D0%B0%D0%BD%D0%B8%D0%B5%29
+	* @param startComNum	<unsigned> - start number of port for scan 
+	* @param baud		<comBaud_t> - BaudRate. The BAUD_ENUM must be used
+	* @return				<evtMask_t> EVT_NO (0) - if OK, 
+									or EVT_ERR_CRITICAL and port handler is closed
+	***************************************************************/
+	comEvtMsk_t openFirstFree( unsigned& startComNum, comBaud_t baud);
+
 
 	/**************************************************************
 	* @brief Open COM-port.
@@ -231,9 +270,7 @@ public:
 	comEvtMsk_t open( const char* const comName, comBaud_t baud );
 
 	/**************************************************************
-	* @brief Close com-port. (handle only). 
-	* Other all variables of class are reset in default value, except user's param
-	* The observer for sysClk will be deleted
+	* @brief Close of com-port and delete observer from sysClk if handle defined. 
 	* You can reopen port letter 
 	**************************************************************/
 	void close();
@@ -288,6 +325,9 @@ protected:
 	Buffer m_rxBuf;			// buffer for Rx
 	Buffer m_txBuf;			// buffer for Rx
 	comCfg_t m_cfg;			// last cfg of port. For reopen()
+	// for detect number of created objects
+	static uint8_t m_numOfObject;
+
 	/****************************************************************
 	 * @brief Create ComPortWin32 object.
 	 * Link com port object with external Rx & Tx Buffers
@@ -297,8 +337,7 @@ protected:
 	 * @param sizeRxBuf:<int> - size of Rx buffer
 	 * @param sizeTxBuf:<int> - size of Tx buffer
 	***************************************************************/
-	ComPortWin32(TimeBase& sysClk, 
-		char* const pRxBuf, char* const pTxBuf,
+	ComPortWin32(TimeBase& sysClk,
 		int sizeRxBuf, int sizeTxBuf);
 
 	/****************************************************************
@@ -306,6 +345,24 @@ protected:
 	 dynamically created (if not - reset buffer's index)
 	***************************************************************/
 	~ComPortWin32();
+
+	/**************************************************************
+	* @brief Open COM-port (Creates a file descriptor only)
+	* Description in http ://vsokovikov.narod.ru/New_MSDN_API/Menage_files/fn_createfile.htm
+	* https://ru.wikibooks.org/wiki/COM-%D0%BF%D0%BE%D1%80%D1%82_%D0%B2_Windows_%28%D0%BF%D1%80%D0%BE%D0%B3%D1%80%D0%B0%D0%BC%D0%BC%D0%B8%D1%80%D0%BE%D0%B2%D0%B0%D0%BD%D0%B8%D0%B5%29
+	* @param comNum	<unsigned> - number of com port
+	* @return				<evtMask_t> EVT_NO (0) - if OK, 
+	or EVT_ERR_CRITICAL and port handler is closed
+	***************************************************************/
+	comEvtMsk_t open(unsigned comNum);
+
+	/**************************************************************
+	* @brief Return quantity of port which can be opened in system.
+	* The function open and clouse descriptor of file for current object
+	* and return in previous state.
+	* May be used for reserve in vector of port or scan new port.
+	***************************************************************/
+	unsigned getQuantityForOpen(); 
 
 	/****************************************************************
 	 * @brief Set event in external variable for detect events in the future.
@@ -340,9 +397,9 @@ protected:
 	****************	 Private section	********************
 	************************************************************/
 private:
-	HANDLE m_hPort = INVALID_HANDLE_VALUE;	// for CreateFile()
 	OVERLAPPED m_rxOverlap = { 0 };					// struct of WIN32 events for ReadFile() 
-	int m_evtCharCnt = 0;											// counter received m_cfg.evtChar, if used
+	HANDLE m_hPort = INVALID_HANDLE_VALUE;	// for CreateFile()
+	int m_evtCharCnt = 0;										// counter received m_cfg.evtChar, if used
 	// pointer to clock of system
 	TimeBase* m_pSysClk;
 
