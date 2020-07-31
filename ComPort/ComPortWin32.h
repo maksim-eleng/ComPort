@@ -346,24 +346,6 @@ protected:
 	***************************************************************/
 	~ComPortWin32();
 
-	/**************************************************************
-	* @brief Open COM-port (Creates a file descriptor only)
-	* Description in http ://vsokovikov.narod.ru/New_MSDN_API/Menage_files/fn_createfile.htm
-	* https://ru.wikibooks.org/wiki/COM-%D0%BF%D0%BE%D1%80%D1%82_%D0%B2_Windows_%28%D0%BF%D1%80%D0%BE%D0%B3%D1%80%D0%B0%D0%BC%D0%BC%D0%B8%D1%80%D0%BE%D0%B2%D0%B0%D0%BD%D0%B8%D0%B5%29
-	* @param comNum	<unsigned> - number of com port
-	* @return				<evtMask_t> EVT_NO (0) - if OK, 
-	or EVT_ERR_CRITICAL and port handler is closed
-	***************************************************************/
-	comEvtMsk_t open(unsigned comNum);
-
-	/**************************************************************
-	* @brief Return quantity of port which can be opened in system.
-	* The function open and clouse descriptor of file for current object
-	* and return in previous state.
-	* May be used for reserve in vector of port or scan new port.
-	***************************************************************/
-	unsigned getQuantityForOpen(); 
-
 	/****************************************************************
 	 * @brief Set event in external variable for detect events in the future.
 	 * @param events <evtMask_t> - external variables for result of event
@@ -442,5 +424,24 @@ private:
 
 
 };
+
+
+/**************************************************************
+* @brief Open COM-port (Creates a file descriptor only)
+* Description in http ://vsokovikov.narod.ru/New_MSDN_API/Menage_files/fn_createfile.htm
+* https://ru.wikibooks.org/wiki/COM-%D0%BF%D0%BE%D1%80%D1%82_%D0%B2_Windows_%28%D0%BF%D1%80%D0%BE%D0%B3%D1%80%D0%B0%D0%BC%D0%BC%D0%B8%D1%80%D0%BE%D0%B2%D0%B0%D0%BD%D0%B8%D0%B5%29
+* @param comNum	<unsigned> - number of com port
+* @return				<evtMask_t> EVT_NO (0) - if OK, 
+or EVT_ERR_CRITICAL and port handler is closed
+***************************************************************/
+HANDLE comOpenHandle(unsigned comNum);
+
+/**************************************************************
+* @brief Return quantity of port which can be opened in system.
+* The function open and clouse descriptor of file for current object
+* and return in previous state.
+* May be used for reserve in vector of port or scan new port.
+***************************************************************/
+unsigned comGetQuantityForOpen(); 
 
 #endif

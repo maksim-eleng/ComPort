@@ -53,6 +53,9 @@ NMEA::NMEA(nmeaCfgEEPROM_t& cfgEEPROM, std::vector<ComPort>& com, TimeBase& sysC
 	sysClk.addObserver(*this, sysClk.EVT_1S);
 
 	// Creates of ports
+
+	// Method 1: 73-75ms
+
 	comCfg_t cfg;
 	cfg.byteSize = 8;
 	cfg.parity = ComPort::P_NO;
@@ -60,9 +63,13 @@ NMEA::NMEA(nmeaCfgEEPROM_t& cfgEEPROM, std::vector<ComPort>& com, TimeBase& sysC
 	cfg.evtChar = '\n';
 	unsigned ch = 0;
 	unsigned startComNum = 0;
-
-	m_com.reserve(SysConst::maxUARTChannel);
-	for (unsigned i=0; i < SysConst::maxUARTChannel; ++i) {
+	 
+	unsigned numOfPorts;
+	numOfPorts = comGetQuantityForOpen();
+	m_com.reserve(numOfPorts);
+//	m_com.reserve(SysConst::maxUARTChannel);
+//	for (unsigned i=0; i < SysConst::maxUARTChannel; ++i) {
+	for (unsigned i=0; i < numOfPorts; ++i) {
 		comEvtMsk_t events;
 		m_com.emplace_back(sysClk);
 		events = m_com[ch].openFirstFree(startComNum, m_flags[i].BautRate);
@@ -76,7 +83,7 @@ NMEA::NMEA(nmeaCfgEEPROM_t& cfgEEPROM, std::vector<ComPort>& com, TimeBase& sysC
 			break;
 		}
 	}
-	m_com.shrink_to_fit();
+	//m_com.shrink_to_fit();
 }
 
 /************************************************************/

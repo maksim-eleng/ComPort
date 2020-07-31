@@ -34,8 +34,7 @@ int main(int argc, char* argv[])
 
 	com[0] << "Hello CH0!\n";
 	com[1] << "Hello CH1!\n";
-
-
+	
 	while (1) {
 	
 		
