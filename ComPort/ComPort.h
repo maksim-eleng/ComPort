@@ -3,6 +3,7 @@
 #include "SysConst.h"
 #include "TimeBase.h"
 #include <vector>
+#include "Observer.h"
 
 /*****************************************************
  * @brief Change include and using according base system.
@@ -12,6 +13,71 @@
 #include "ComPortWin32.h"
 using SysComPort_t = ComPortWin32;
 #endif
+
+
+class Observer
+{
+public:
+
+	typedef struct{
+		IObsComPort * pToObs;	// pointer to observer
+		comEvtMsk_t evtMsk;	// mask for generation event for this observer
+	}obsData_t;
+
+	Observer() = default;
+	~Observer() = default;
+
+	Observer(const Observer&) = delete;
+	Observer(Observer&&) = delete;
+	Observer& operator=(const Observer&) = delete;
+	Observer& operator=(Observer&&) = delete;
+
+
+	void addObserver(IObsComPort& obs, comEvtMsk_t evtMsk)
+	{
+		// поиск в существующих записях obs.
+		// есть - добавляем маску, нет - добавляем запись
+		for (auto& _obs : m_obs) {
+			if (_obs.pToObs == &obs) {
+				_obs.evtMsk = static_cast<comEvtMsk_t>(_obs.evtMsk | static_cast<comEvtMsk_t>(evtMsk));
+				return;
+			}
+		}
+		obsData_t _obj = { &obs, evtMsk };
+		m_obs.push_back(_obj);
+	}
+
+	/**************************************************/
+	void removeObserver(IObsComPort& obs)
+	{
+		comEvtMsk_t obsMsk = (comEvtMsk_t)0;
+		std::vector<obsData_t>::iterator _obs;
+
+		for (_obs = m_obs.begin(); _obs != m_obs.end(); ++_obs) {
+			if (_obs->pToObs == &obs) {
+				obsMsk = _obs->evtMsk;
+				m_obs.erase(_obs);
+				break;
+			}
+		}
+	}
+
+	/**************************************************************/
+	void notifyObservers(comEvtMsk_t evtMask)
+	{
+		for (auto& _obs : m_obs) {
+			_obs.pToObs->handleEvent(evtMask);
+		}
+	}
+
+
+private:
+	std::vector<obsData_t> m_obs;		// data about observer
+};
+
+
+
+
 
 // declaration of interface for observer
 class IObsComPort;
@@ -187,6 +253,9 @@ public:
 	****************	 Private section	********************
 	************************************************************/
 private:
+
+	Observer m_obs;
+
 	// pointers for observer objects 
 	std::vector< IObsComPort* > m_observers;
 	// Number of channel of port. May be used if using several ports

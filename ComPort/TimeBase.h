@@ -3,7 +3,6 @@
 #include <string>
 #include <assert.h>
 #include "SysConst.h"
-#include "Observer.h"
 /*****************************************************
  * @brief Change include and using according base system.
  Win32TimeBase class working in win32 system
@@ -113,6 +112,7 @@ private:
 	// observer is added.
 	// If bit in m_evtMsk = 1 - event as EVT_1MS was permitted
 	tBaseEvtMsk_t m_evtMsk = EVT_NO;
+
 
 	// object Observers 
 	std::vector<tBaseObs_t>m_observers;
