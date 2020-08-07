@@ -6,12 +6,12 @@
 void EventSystem::handleEvent(TimeBase& ref, TimeBase::tBaseEvtMsk_t evtMsk)
 {
 	if (evtMsk & ref.EVT_1S) {
-		std::cout << '\n' << ref.getTime() << '\t' << ref.getDate() << '\n';
+		std::cout << '\n' << ref.getTimeStr() << '\t' << ref.getDateStr() << '\n';
 	}
 }
 
 /**************************************************************/
-void EventSystem::handleEvent(ComPort& com, comEvtMsk_t evtMask)
+void EventSystem::handleEvent(ComPort& com, const comEvtMsk_t evtMask)
 {
 	// 
 	if (evtMask & com.EVT_RX_USER_CHAR) {

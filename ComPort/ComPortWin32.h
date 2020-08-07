@@ -4,7 +4,7 @@
 
 #include "Buffer.h"
 #include "TimeBase.h"
-#include <iostream>
+#include <ostream>
 
 // if interrupts for Rx data from port is not available, for receive
 // data periodically interrogation must be used.
@@ -16,7 +16,7 @@ class ComPortWin32: public IObsTimeBase
 public:
 
 	static constexpr char COM_NOT_CFG = -1;
-	static constexpr char MAX_COM_NUM = 50;
+	static constexpr char MAX_COM_NUM = 20;
 
 	/************************************************************
 	 * @brief Com port event masks. Must be set by means of setEvent()
@@ -47,7 +47,7 @@ public:
 		// Port was opened earlier. Set in open()
 		EVT_ERR_OPENED_EARLIER= (1 << 9),
 
-		EVT_END								= EVT_ERR_CRITICAL,
+		EVT_END								= EVT_ERR_OPENED_EARLIER, // must be as last
 	}comEvtMsk_t;
 	 
 	/*********************************************************
@@ -206,10 +206,6 @@ public:
 	// Using when setting up when setParam() used
 	friend comEvtSetMsk_t operator|(comEvtSetMsk_t l, comEvtSetMsk_t r);
 
-	// operator |= for set events mask us setEvtMsk |= EVTSET_RX_CHAR;
-	// Using when setting up when setParam() used
-	friend void operator|=(comEvtSetMsk_t& l, const comEvtSetMsk_t& r);
-
 	/***************************************************************
 	 * @brief Set parameters of com-port. May be used after create object of port and
 	 * if port is opened (if not - the file descriptor not defined).
@@ -218,12 +214,12 @@ public:
 	 * @return <comEvtMsk_t>:	EVT_NO - set completted
 														EVT_ERR_INVALID_PARAM - not all parameters are set ore the settings are not correct
 	****************************************************************/
-	comEvtMsk_t setParam(comCfg_t& param);
+	comEvtMsk_t setParam(const comCfg_t& param);
 
 	/**************************************************************
 	* @brief Open COM-port.
 	* Parameters will be set letter via setParam() function
-	* Number of port will be save in class.
+	* Number of port and baud will be saved in class.
 	* Creates a file descriptor. 
 	* Timings set as: for Read 1 char - max, the rest coeffichience - 0
 	* (for without delays and wait operation).
@@ -234,7 +230,24 @@ public:
 	* @return				<evtMask_t> EVT_NO (0) - if OK, 
 									or EVT_ERR_CRITICAL and port handler is closed
 	***************************************************************/
-	comEvtMsk_t open( unsigned comNum, comBaud_t baud);
+	comEvtMsk_t open(unsigned comNum, comBaud_t baud);
+
+	/**************************************************************
+	* @brief Open COM-port.
+	* Parameters will be set letter via setParam() function
+	* Number of port and baud will be saved in class.
+	* Creates a file descriptor.
+	* Timings set as: for Read 1 char - max, the rest coeffichience - 0
+	* (for without delays and wait operation).
+	* Subscribe to sysClk with 10ms period
+	* Description in http ://vsokovikov.narod.ru/New_MSDN_API/Menage_files/fn_createfile.htm
+	* https://ru.wikibooks.org/wiki/COM-%D0%BF%D0%BE%D1%80%D1%82_%D0%B2_Windows_%28%D0%BF%D1%80%D0%BE%D0%B3%D1%80%D0%B0%D0%BC%D0%BC%D0%B8%D1%80%D0%BE%D0%B2%D0%B0%D0%BD%D0%B8%D0%B5%29
+	* @param comName	<const char* const> - number of com port in the form "COM1" or "\\.\COM1"
+	* @param baud			<comBaud_t> - BaudRate. The BAUD_ENUM must be used
+	* @return					<evtMask_t> EVT_NO (0) - if OK,
+										or EVT_ERR_CRITICAL and port handler is closed
+	***************************************************************/
+	comEvtMsk_t open(const char* const comName, comBaud_t baud );
 
 	/**************************************************************
 	* @brief Open the first free COM-port.
@@ -252,22 +265,19 @@ public:
 	***************************************************************/
 	comEvtMsk_t openFirstFree( unsigned& startComNum, comBaud_t baud);
 
-
 	/**************************************************************
-	* @brief Open COM-port.
-	* Parameters will be set letter via setParam() function
-	* Creates a file descriptor.
-	* Timings set as: for Read 1 char - max, the rest coeffichience - 0
-	* (for without delays and wait operation).
-	* Subscribe to sysClk with 10ms period
-	* Description in http ://vsokovikov.narod.ru/New_MSDN_API/Menage_files/fn_createfile.htm
-	* https://ru.wikibooks.org/wiki/COM-%D0%BF%D0%BE%D1%80%D1%82_%D0%B2_Windows_%28%D0%BF%D1%80%D0%BE%D0%B3%D1%80%D0%B0%D0%BC%D0%BC%D0%B8%D1%80%D0%BE%D0%B2%D0%B0%D0%BD%D0%B8%D0%B5%29
-	* @param comName	<const char* const> - number of com port in the form "COM1" or "\\.\COM1"
-	* @param baud			<comBaud_t> - BaudRate. The BAUD_ENUM must be used
-	* @return					<evtMask_t> EVT_NO (0) - if OK,
-										or EVT_ERR_CRITICAL and port handler is closed
+	* @brief Check port is opened or not
+	* @return true if port is opened 
 	***************************************************************/
-	comEvtMsk_t open( const char* const comName, comBaud_t baud );
+	bool isPortOpened() const;
+
+	/****************************************************************
+	* @brief Reopen of port with last parameters (port number, baud,...).
+	* Last parameters sets where SetParam().
+	* @return	<evtMask_t> EVT_NO (0) - if OK,
+	*					or EVT_ERR_CRITICAL and port handler is closed
+	***************************************************************/
+	comEvtMsk_t reopen();
 
 	/**************************************************************
 	* @brief Close of com-port and delete observer from sysClk if handle defined. 
@@ -275,30 +285,12 @@ public:
 	**************************************************************/
 	void close();
 
-	/****************************************************************
-	 * @brief Reopen of port with last parameters (port number, baud,...).
-	 * @return	<evtMask_t> EVT_NO (0) - if OK,
-							or EVT_ERR_CRITICAL and port handler is closed
-	***************************************************************/
-	comEvtMsk_t reopen();
-
-	/**************************************************************
-	 * @brief Check port is opened or not
-	 * @return true if port is opened 
-	***************************************************************/
-	bool isPortOpened() const;
-
 	/*****************************************************************
-	 * @brief Return number of received Event user char, if used 
-	 * (user char must be set in setPAram() when config port)
-	 * @return number of received Event user char 
+	* @brief Return number of received Event user char, if used 
+	* (user char must be set in setPAram() when config port)
+	* @return number of received Event user char 
 	****************************************************************/
-	int userCharGetReceivedCounter() const;
-
-	/*****************************************************************
-	 * @brief Must be call after every "user char received" handler 
-	****************************************************************/
-	void userCharHandled();
+	int getUserCharReceivedCounter() const;
 
 	/*****************************************************************
 	 * @brief Return Number of port or COM_NOT_CFG_VALUE if not 
@@ -326,23 +318,20 @@ protected:
 	Buffer m_txBuf;			// buffer for Rx
 	comCfg_t m_cfg;			// last cfg of port. For reopen()
 	// for detect number of created objects
-	static uint8_t m_numOfObject;
+	static uint8_t m_numOfObjects;
 
 	/****************************************************************
 	 * @brief Create ComPortWin32 object.
-	 * Link com port object with external Rx & Tx Buffers
-	 * Rx/Tx Buffers may be external or set dynamically.
-	 * @param pRxBuf :<char*> - pointer to external Rx buffer. If =0 - dynamic method
-	 * @param pTxBuf :<char*> - pointer to external Tx buffer. If =0 - dynamic method
-	 * @param sizeRxBuf:<int> - size of Rx buffer
-	 * @param sizeTxBuf:<int> - size of Tx buffer
-	***************************************************************/
+	 * Create dynamically Rx & Tx Buffers, link with external sysClk object.
+	 * @param sysClk:<TimeBase> - external sysClk object
+	 * @param sizeRxBuf:<unsigned> - size of Rx buffer
+	 * @param sizeTxBuf:<unsigned> - size of Tx buffer
+	 ***************************************************************/
 	ComPortWin32(TimeBase& sysClk,
-		int sizeRxBuf, int sizeTxBuf);
+		unsigned sizeRxBuf, unsigned sizeTxBuf);
 
 	/****************************************************************
-	 * @brief Delete ComPortWin32 object. Delete handler, buffers if
-	 dynamically created (if not - reset buffer's index)
+	 * @brief Delete ComPortWin32 object. Delete buffers, close of port
 	***************************************************************/
 	~ComPortWin32();
 
@@ -358,7 +347,10 @@ protected:
 	* @brief Start of transmit data from tx buffer, while buffer is
 	not empty. If write to port error was detected - tx buffer stay on
 	previous state.
-	* @return	<evtMask_t> event mask of EVT_COMM_MASK_ENUM
+	* @return	<evtMask_t> event mask of EVT_COMM_MASK_ENUM:
+	*					EVT_ERR_TX - if tx buffer is empty or err when transmit
+	*					EVT_ERR_CRITICAL - port not opened
+	*					EVT_NO - OK
 	**************************************************************/
 	comEvtMsk_t startTx();
 
@@ -368,10 +360,16 @@ protected:
 	* If data in buffer starts with '\0' - not copy.
 	* @param cstr	<const char*> - c_style string
 	* @return	true - OK
-	*					false - not ok. In this case EVT_ERR_CRITICAL, EVT_ERR_TX events may be
-							transmit to observers
+	*					false - not ok. In this case EVT_ERR_CRITICAL, EVT_ERR_TX events were 
+	*									sent to observers
 	***********************************************/
 	bool print(const char* cstr);
+
+	/*****************************************************************
+	* @brief Must be call after every "user char received" handler 
+	****************************************************************/
+	void userCharHandled();
+
 
 
 
@@ -392,18 +390,9 @@ private:
 	* https://ru.wikibooks.org/wiki/COM-%D0%BF%D0%BE%D1%80%D1%82_%D0%B2_Windows_%28%D0%BF%D1%80%D0%BE%D0%B3%D1%80%D0%B0%D0%BC%D0%BC%D0%B8%D1%80%D0%BE%D0%B2%D0%B0%D0%BD%D0%B8%D0%B5%29
 	* @param comNum	<unsigned> - number of com port
 	* @return				<evtMask_t> EVT_NO (0) - if OK, 
-	or EVT_ERR_CRITICAL and port handler is closed
+	*								or EVT_ERR_CRITICAL and port handler is closed
 	***************************************************************/
 	static HANDLE openHandle(unsigned comNum);
-
-	/******************************************************
-	 * @brief Subscribe object of port to clock synchronization system
-	 * Must be used if object was created without clock of system parameter
-	 * (see constructor)
-	 * @param sysClk <TimeBase> - object of clock synchronization system
-	 * @param evtMsk <tBaseEvtMsk_t> - mask of time events
-	*****************************************************/
-	bool subscribe(TimeBase& sysClk, TimeBase::tBaseEvtMsk_t evtMsk);
 
 	/*************************************************************
 	* @brief For periodically check win32 events for com (events mask must be set before where
@@ -423,7 +412,7 @@ private:
 	 * core return event from port
 	 * @param Not used
 	***********************************************/
-	virtual void handleEvent(TimeBase&, TimeBase::tBaseEvtMsk_t) override;
+	virtual void handleEvent(TimeBase&, const TimeBase::tBaseEvtMsk_t) override;
 
 	/**********************************************
 	 * @brief Notify observers from m_observers list

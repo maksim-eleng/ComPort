@@ -7,19 +7,15 @@
 
 #if RX_DATA_DETECT_METHOD == PERIODICALLY_INTERROGATION
 
-ComPort::ComPort(TimeBase& sysClk, int sizeRxBuf, int sizeTxBuf)
-  :SysComPort_t(sysClk, sizeRxBuf, sizeTxBuf),
-	m_numOfChannel(SysComPort_t::m_numOfObject)
+ComPort::ComPort(TimeBase& sysClk, unsigned sizeRxBuf, unsigned sizeTxBuf)
+  :SysComPort_t(sysClk, sizeRxBuf, sizeTxBuf)
 {}
 
 #else
 
-ComPort::ComPort(char* const pRxBuf, char* const pTxBuf, int sizeRxBuf, int sizeTxBuf)
-	:SysComPort_t(pRxBuf, pTxBuf, sizeRxBuf, sizeTxBuf)
-{
-	++m_numOfObject;
-	m_numOfChannel = m_numOfObject - 1;
-}
+ComPort::ComPort(unsigned sizeRxBuf, unsigned sizeTxBuf)
+	:SysComPort_t(sizeRxBuf, sizeTxBuf)
+{}
 
 #endif
 
@@ -55,13 +51,11 @@ ComPort& ComPort::operator<<(const int num)
 /**************************************************************/
 int ComPort::getRxStr( char* str, int size)
 {
-  return m_rxBuf.get(str, size, m_cfg.evtChar);
-}
-
-/**************************************************************/
-uint8_t ComPort::getNumOfChannel() const
-{
-	return m_numOfChannel;
+	int res = m_rxBuf.get(str, size, m_cfg.evtChar);
+	if (Buffer::resultNG != res) {
+		userCharHandled();
+	}
+	return res;
 }
 
 /**************************************************************/
@@ -89,28 +83,43 @@ int ComPort::searchInRxBuf(const char* str, int pStartInBuf, bool isReturnIndAft
 	return m_rxBuf.search(str, pStartInBuf, isReturnIndAfterStr);
 }
 
+
+
 /***********************************************/
-void ComPort::addObserver(IObsComPort & obs)
+bool ComPort::addObserver(IObsComPort & obs, const comEvtMsk_t evtMsk)
 {
-  m_observers.push_back(&obs);
+	// search obs. Add mask if found or add obs with current musk, if not
+	for (auto& _obs : m_observers) {
+		if (_obs.pToObs == &obs) {
+			_obs.evtMsk = static_cast<comEvtMsk_t>(_obs.evtMsk | static_cast<comEvtMsk_t>(evtMsk));
+			return true;
+		}
+	}
+	obsData_t _obj = { &obs, evtMsk };
+	m_observers.push_back(_obj);
+	return true;
 }
 
 /***********************************************/
-void ComPort::removeObserver(IObsComPort & obs)
+void ComPort::removeObserver(const IObsComPort & obs)
 {
-	for (int ind = 0; ind < m_observers.size(); ++ind) {
-		if (&obs == m_observers[ind]) {
-			m_observers.erase(m_observers.begin() + ind);
+	std::vector<obsData_t>::iterator _obs;
+
+	for (_obs = m_observers.begin(); _obs != m_observers.end(); ++_obs) {
+		if (_obs->pToObs == &obs) {
+			m_observers.erase(_obs);
 			break;
 		}
 	}
 }
 
 /**************************************************************/
-void ComPort::notifyObservers(comEvtMsk_t evtMask)
+void ComPort::notifyObservers(comEvtMsk_t evtMsk)
 {
   for (auto& obs : m_observers) {
-    obs->handleEvent(*this, evtMask);
+		comEvtMsk_t resMsk = static_cast<comEvtMsk_t>(obs.evtMsk & evtMsk);
+		if (resMsk)
+			obs.pToObs->handleEvent(*this, resMsk);
   }
 }
 

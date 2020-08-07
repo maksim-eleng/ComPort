@@ -3,7 +3,6 @@
 #include "SysConst.h"
 #include "TimeBase.h"
 #include <vector>
-#include "Observer.h"
 
 /*****************************************************
  * @brief Change include and using according base system.
@@ -13,70 +12,6 @@
 #include "ComPortWin32.h"
 using SysComPort_t = ComPortWin32;
 #endif
-
-
-class Observer
-{
-public:
-
-	typedef struct{
-		IObsComPort * pToObs;	// pointer to observer
-		comEvtMsk_t evtMsk;	// mask for generation event for this observer
-	}obsData_t;
-
-	Observer() = default;
-	~Observer() = default;
-
-	Observer(const Observer&) = delete;
-	Observer(Observer&&) = delete;
-	Observer& operator=(const Observer&) = delete;
-	Observer& operator=(Observer&&) = delete;
-
-
-	void addObserver(IObsComPort& obs, comEvtMsk_t evtMsk)
-	{
-		// поиск в существующих записях obs.
-		// есть - добавляем маску, нет - добавляем запись
-		for (auto& _obs : m_obs) {
-			if (_obs.pToObs == &obs) {
-				_obs.evtMsk = static_cast<comEvtMsk_t>(_obs.evtMsk | static_cast<comEvtMsk_t>(evtMsk));
-				return;
-			}
-		}
-		obsData_t _obj = { &obs, evtMsk };
-		m_obs.push_back(_obj);
-	}
-
-	/**************************************************/
-	void removeObserver(IObsComPort& obs)
-	{
-		comEvtMsk_t obsMsk = (comEvtMsk_t)0;
-		std::vector<obsData_t>::iterator _obs;
-
-		for (_obs = m_obs.begin(); _obs != m_obs.end(); ++_obs) {
-			if (_obs->pToObs == &obs) {
-				obsMsk = _obs->evtMsk;
-				m_obs.erase(_obs);
-				break;
-			}
-		}
-	}
-
-	/**************************************************************/
-	void notifyObservers(comEvtMsk_t evtMask)
-	{
-		for (auto& _obs : m_obs) {
-			_obs.pToObs->handleEvent(evtMask);
-		}
-	}
-
-
-private:
-	std::vector<obsData_t> m_obs;		// data about observer
-};
-
-
-
 
 
 // declaration of interface for observer
@@ -90,38 +25,37 @@ class ComPort: public SysComPort_t
 {
 public:
 
+	/***********************************************************
+	 * @brief Data about observers
+	************************************************************/
+	typedef struct{
+		IObsComPort * pToObs;	// pointer to observer
+		comEvtMsk_t evtMsk;		// mask for generation event for *pToObs observer
+	}obsData_t;
+
+
+
 #if RX_DATA_DETECT_METHOD == PERIODICALLY_INTERROGATION
 	/***********************************************************
 	* @brief	Create ComPort object with synchronization with system's clock.
 	* The system clock needed if port can not use interrupt for receive and for
 	* check events of port the hundler of event must be call periodically.
-	* Link com port object with external Rx & Tx Buffers in SysComPort_t path
-	* Rx/Tx Buffers may be external or set dynamically.
-	* Use:	ComPort com(rxBuf, txBuf, sizeof(rxBuf), sizeof(txBuf));
-				ComPort com4; - for buffers dynamic memory allocation
+	* Initialization of Rx/Tx Buffers performed in SysComPort_t path.
 	* @param sysClk :<TimeBase> - system clock object.
-	* @param pRxBuf :<char*> - pointer to external Rx buffer. If =0 - dynamic method
-	* @param pTxBuf :<char*> - pointer to external Tx buffer. If =0 - dynamic method
-	* @param sizeRxBuf:<int> - size of Rx buffer. If not set - MIN_BUFFER_SIZE
-	* @param sizeTxBuf:<int> - size of Tx buffer. If not set - MIN_BUFFER_SIZE
+	* @param sizeRxBuf:<unsigned> - size of Rx buffer. If not set -  SysConst::txBufSize
+	* @param sizeTxBuf:<unsigned> - size of Tx buffer. If not set -  SysConst::txBufSize
 	************************************************************/
 	ComPort(TimeBase& sysClk,
-		int sizeRxBuf = SysConst::rxBufSize, int sizeTxBuf = SysConst::txBufSize);
+		unsigned sizeRxBuf = SysConst::rxBufSize, unsigned sizeTxBuf = SysConst::txBufSize);
 
 #else
 	/***********************************************************
 	 * @brief	Create ComPort object.
-	 * Link com port object with external Rx & Tx Buffers in SysComPort_t path
-	 * Rx/Tx Buffers may be external or set dynamically.
-	 * Use:	ComPort com(rxBuf, txBuf, sizeof(rxBuf), sizeof(txBuf));
-					ComPort com4; - for buffers dynamic memory allocation
-	 * @param pRxBuf :<char*> - pointer to external Rx buffer. If =0 - dynamic method
-	 * @param pTxBuf :<char*> - pointer to external Tx buffer. If =0 - dynamic method
-	 * @param sizeRxBuf:<int> - size of Rx buffer. If not set - MIN_BUFFER_SIZE
-	 * @param sizeTxBuf:<int> - size of Tx buffer. If not set - MIN_BUFFER_SIZE
+	 * Initialization of Rx/Tx Buffers performed in SysComPort_t path.
+	 * @param sizeRxBuf:<int> - size of Rx buffer. If not set - SysConst::txBufSize
+	 * @param sizeTxBuf:<int> - size of Tx buffer. If not set - SysConst::txBufSize
 	************************************************************/
-	ComPort(char* const pRxBuf = nullptr, char* const pTxBuf = nullptr,
-		int sizeRxBuf = MIN_BUF_SIZE, int sizeTxBuf = MIN_BUF_SIZE);
+	ComPort(unsigned sizeRxBuf = SysConst::rxBufSize, unsigned sizeTxBuf = SysConst::txBufSize);
 
 #endif
 
@@ -155,7 +89,7 @@ public:
 	* @param cstr	<const char*> - std::string
 	* @return	true - OK
 	*					false - not ok. In this case EVT_ERR_CRITICAL, EVT_ERR_TX events may be
-							transmit to observers
+							transmitted to observers
 	***********************************************/
 	bool print(std::string str);
 
@@ -163,6 +97,8 @@ public:
 	* @brief Print to port c_style string while EOF char 
 	* not will be printed (EOF char set us Event char in port config).
 	* If data in buffer starts with '\0' - not copy.
+	* EVT_ERR_CRITICAL, EVT_ERR_TX events may be 	transmitted to observers
+	* if data can't be transmitted
 	* @param cstr	<const char*> - c_style string
 	* @return	<ComPort&> for use as com<<"ddd"<<"sss";
 	***********************************************/
@@ -191,13 +127,6 @@ public:
 	int getRxStr( char* str, int size);
 
 	/**************************************************************
-	* @brief Get number of channel of port. May be used if using several ports
-	* @return <uint8_t> - number of channel of port in range 0...
-	**************************************************************/
-	uint8_t getNumOfChannel() const;
-
-
-	/**************************************************************
 	 * @brief	Redirect received string (from Rx buffer) from port to 
 	 * anather port (Tx) while EOF user char not will be redirected 
 	 * (EOF char set us Event char in port config).
@@ -205,8 +134,8 @@ public:
 	 * If function complete with error, the buffers returns
 	 * to previous state.
 	 * @param dstCom <ComPort> - port of destination
-	 * @param fTransfer <bool> = true - transfer data with delete data in source
-	 *										=false - copy data
+	 * @param fTransfer <bool>	= true - transfer data with delete data in source
+	 *													=false - copy data
 	 * @return	true - Transfer is success
 	 *					false - the EOF char not found in buffer of
 	 *						source while copy operation. All buffers
@@ -237,15 +166,18 @@ public:
 
 	/**********************************************
 	* @brief	Add observer for event  to another objects.
-	* @param ref <IObserverComPort&> - object that inherits IObsComPort
+	* @param obs <IObserverComPort&> - object that inherits IObsComPort
+	* @param evtMsk <comEvtMsk_t> - mask of events for observer. ComPort
+	*					will be event to observer only mask is set
+	* @return	true - ok
 	***********************************************/
-	void addObserver(IObsComPort& obs);
+	bool addObserver(IObsComPort& obs, const comEvtMsk_t evtMsk);
 
 	/**********************************************
 	* @brief Remove observer
 	* @param ref <IObserverComPort&> - object that inherits IObserverComPort
 	***********************************************/
-	void removeObserver(IObsComPort& obs);
+	void removeObserver(const IObsComPort& obs);
 
 
 
@@ -254,21 +186,15 @@ public:
 	************************************************************/
 private:
 
-	Observer m_obs;
-
-	// pointers for observer objects 
-	std::vector< IObsComPort* > m_observers;
-	// Number of channel of port. May be used if using several ports
-	// as number of channel of port. Init where object is created and
-	// must be in range 0...
-	uint8_t m_numOfChannel;
+	// pointers for observer objects and masks 
+	std::vector< obsData_t > m_observers;
 
 	/**********************************************
 	 * @brief Notify observers from m_observers list
 	 * @param evtMask <comEvtMsk_t> - reason of call. May be used
-								by observer for hanle the event
+								by observer for handler the event
 	***********************************************/
-	virtual void notifyObservers(comEvtMsk_t evtMask) override;
+	virtual void notifyObservers(comEvtMsk_t evtMask) override final;
 
 };
 
@@ -294,7 +220,7 @@ class IObsComPort
 {
 public:
 
-	virtual void handleEvent(ComPort&, ComPort::comEvtMsk_t) = 0;
+	virtual void handleEvent(ComPort&, const ComPort::comEvtMsk_t) = 0;
 };
 
 

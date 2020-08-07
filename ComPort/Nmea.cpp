@@ -1,6 +1,7 @@
 #include "Nmea.h"
 #include <iostream>
 
+
 /************************************************************/
 bool NMEA::checkCfgEEPROM(nmeaCfgEEPROM_t& cfgEEPROM, uint8_t unprogValue)
 {
@@ -26,29 +27,30 @@ bool NMEA::checkCfgEEPROM(nmeaCfgEEPROM_t& cfgEEPROM, uint8_t unprogValue)
  * @param cfg 
  * @return 
 */
-NMEA::NMEA(nmeaCfgEEPROM_t& cfgEEPROM, std::vector<ComPort>& com, TimeBase& sysClk)
+
+NMEA::NMEA(nmeaCfgEEPROM_t& nmeaCfgEEPROM, std::vector<ComPort>& com, TimeBase& sysClk)
 	:m_com(com)
 {
 	// check setting in EEPROM and config as default if nessessary
-	if (checkCfgEEPROM(cfgEEPROM, 0x00) == false || checkCfgEEPROM(cfgEEPROM, 0xFF) == false) {
-		setCfgDefault(cfgEEPROM);
+	if (checkCfgEEPROM(nmeaCfgEEPROM, 0x00) == false || checkCfgEEPROM(nmeaCfgEEPROM, 0xFF) == false) {
+		setCfgDefault(nmeaCfgEEPROM);
 	}
 	// config NMEA cfg 
 	for (int ch = 0; ch < SysConst::maxUARTChannel; ++ch) {
 		chFlags_t& chFl = m_flags[ch];
 		for (int cmd = NO; cmd < MAX_NMEACmdStrIndex; cmd++) {
-			chFl.cmd[cmd].permits = (cmdPermits_t)cfgEEPROM.chCfg[ch].cmdPermits[cmd];
+			chFl.cmd[cmd].permits = (cmdPermits_t)nmeaCfgEEPROM.chCfg[ch].cmdPermits[cmd];
 			chFl.cmd[cmd].counter = TIMEOUT;
 		} // end for cmd
-		chFl.BautRate = cfgEEPROM.chCfg[ch].BautRate;
-		chFl.TimeInterval = cfgEEPROM.chCfg[ch].TimeInterval;
-		chFl.TIDPriorityPermis = cfgEEPROM.chCfg[ch].TIDPriorityPermis;
-		chFl.ioUsedForUART.in = cfgEEPROM.chCfg[ch].ioUsedForUART.in;
-		chFl.ioUsedForUART.out = cfgEEPROM.chCfg[ch].ioUsedForUART.in;
+		chFl.BautRate = nmeaCfgEEPROM.chCfg[ch].BautRate;
+		chFl.TimeInterval = nmeaCfgEEPROM.chCfg[ch].TimeInterval;
+		chFl.TIDPriorityPermis = nmeaCfgEEPROM.chCfg[ch].TIDPriorityPermis;
+		chFl.ioUsedForUART.in = nmeaCfgEEPROM.chCfg[ch].ioUsedForUART.in;
+		chFl.ioUsedForUART.out = nmeaCfgEEPROM.chCfg[ch].ioUsedForUART.in;
 		//	nmeaFl[ch].PermisTx = 0;
 		//	nmeaFl[ch].ChechSumErrFlag = Off;
 	}
-	m_numOfTerminalChannel = cfgEEPROM.numOfTerminalChannel;
+	m_numOfTerminalChannel = nmeaCfgEEPROM.numOfTerminalChannel;
 
 	sysClk.addObserver(*this, sysClk.EVT_1S);
 
@@ -68,7 +70,7 @@ NMEA::NMEA(nmeaCfgEEPROM_t& cfgEEPROM, std::vector<ComPort>& com, TimeBase& sysC
 		events = m_com[ch].openFirstFree(startComNum, m_flags[i].BautRate);
 		if (ComPort::EVT_NO == events) {
 			events = m_com[ch].setParam(cfg);
-			m_com[ch].addObserver(*this);
+			m_com[ch].addObserver(*this, ComPort::EVT_RX_USER_CHAR);
 			++ch;
 		}
 		else {
@@ -197,11 +199,10 @@ void NMEA::handleEvent(ComPort& com, comEvtMsk_t evtMask)
 {
 	// 
 	if (evtMask & com.EVT_RX_USER_CHAR) {
-		while (com.userCharGetReceivedCounter()) {
+		while (com.getUserCharReceivedCounter()) {
 			char str[SysConst::nmeaMaxStrLen];
 			com.getRxStr(str, sizeof(str));
 			std::cout << str;
-			com.userCharHandled();
 		}
 	}
 }

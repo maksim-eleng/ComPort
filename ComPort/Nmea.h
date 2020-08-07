@@ -4,15 +4,13 @@
 #include "TimeBase.h"
 #include "SysConst.h"
 
-
-
 /***********************	MACROS	***************************
 ************************************************************/
 
 /************************************************************
  * @brief Checking if there is a command on a least 1 input 
 ************************************************************/
-#define checkCmdTimeOut(cmdName)	(Cmd[cmdName].Bit.TimeOut)
+#define checkCmdTimeOut(cmd_Name)	(Cmd[cmd_Name].Bit.TimeOut)
 
 /************************************************************
  * @brief
@@ -32,6 +30,8 @@ class NMEA : public IObsTimeBase, public IObsComPort
 	static constexpr auto AIS_SOG_NOT_AVAILABLE	= 1023;
 	static constexpr auto AIS_COG_NOT_AVAILABLE	= 3600;
 	static constexpr auto AIS_HDT_NOT_AVAILABLE	= 511;
+
+public:
 
 	/************************************************************
 	* @brief	For detecting name of NMEA string.
@@ -137,8 +137,6 @@ class NMEA : public IObsTimeBase, public IObsComPort
 		T_NOT_CFG = NOT_AVAILABLE,
 	}timeInterval_t;
 
-public:
-
 	/************************************************************
 	* @brief Mask for sets for every NMEA command for store sets
 	* in EEPROM or another storage
@@ -152,30 +150,27 @@ public:
 		Calc_E		= 1 << 4,
 	}cmdPermitsEEPROM_t;
 
-
 	/************************************************************
 	* @brief Sets parameters of NMEA command, 
 	* UART for store sets in EEPROM or another storage only.
 	************************************************************/
-	typedef struct CFG_EEPROM_STRUCT
+	typedef struct NMEA_CFG_EEPROM_STRUCT
 	{
 		struct CFG_CHANNEL_EEPROM_STRUCT
 		{
-			cmdPermitsEEPROM_t cmdPermits[MAX_NMEACmdStrIndex];
-			ComPort::BAUD_ENUM BautRate;			// скорость работы UART.
-			timeInterval_t TimeInterval;			// интервал передачи сформированных команд
-			uint8_t TIDPriorityPermis;				// 
-			// permis use in/out for UART.
-			// If prohibited - in/out may be used as io
+			NMEA::cmdPermitsEEPROM_t cmdPermits[NMEA::MAX_NMEACmdStrIndex];
+			ComPort::BAUD_ENUM BautRate;				// скорость работы UART.
+			NMEA::timeInterval_t TimeInterval;	// интервал передачи сформированных команд
+			uint8_t TIDPriorityPermis;					// 
+																					// permis use in/out for UART.
+																					// If prohibited - in/out may be used as io
 			struct {
 				uint8_t in	: 4;	// !=0 - io используется для UART. ==0 - как IO
 				uint8_t out	: 4;	// !=0 - io используется для UART. ==0 - как IO
 			}ioUsedForUART;
 		}chCfg[SysConst::maxUARTChannel];
-
 		uint8_t numOfTerminalChannel;			// channel number of UART for terminal 
 	}nmeaCfgEEPROM_t;
-
 
 
 
@@ -184,23 +179,22 @@ public:
 	* @param cfgExt 
 	* @return 
 	*/
-	NMEA(nmeaCfgEEPROM_t& cfgEEPROM, std::vector<ComPort>& com, TimeBase& sysClk);
+	NMEA(nmeaCfgEEPROM_t& nmeaCfgEEPROM, std::vector<ComPort>& com, TimeBase& sysClk);
 
 	
 private:
-	
-	
+
 	/************************************************************
 	 * @brief	For detection name of NMEA string. Location of str must
 	 * mutch with enum NMEA_STR_DETECT_ENUM
 	************************************************************/
-	static constexpr char cmdName[MAX_NMEACmdStrIndex][7] =
+	const char cmdName[MAX_NMEACmdStrIndex][5] =
 	{
 	{ "NO"   },
 	{ "HALT" },
 	{ "PRG"  },
 	{ "SET"  },
-	{ "___"},
+	{ "___:"},
 	{ "GGA:" },
 	{ "GNS:" },
 	{ "GLL:" },
@@ -226,25 +220,25 @@ private:
 	{ "WPL:" },
 	{ "XTE:" },
 	{ "ZTG:" },
-	{ "___"},
+	{ "___:"},
 	{ "VDO:" },
 	{ "VDM:" },
-	{ "___"},
+	{ "___:"},
 	{ "HDT:" },
 	{ "HDG:" },
 	{ "HDM:" },
 	{ "ROT:" },
-	{ "___"},
+	{ "___:"},
 	{ "VBW:" },
 	{ "VHW:" },
 	{ "VLW:" },
 	{ "VDR:" },
-	{ "___"},
+	{ "___:"},
 	{ "DBK:" },
 	{ "DBS:" },
 	{ "DBT:" },
 	{ "DPT:" },
-	{ "___"},
+	{ "___:"},
 	{ "MDA:" },
 	{ "MWD:" },
 	{ "MWV:" },
@@ -252,22 +246,22 @@ private:
 	{ "XDR:" },
 	{ "VWR:" },
 	{ "VWT:" },
-	{ "___"},
+	{ "___:"},
 	{ "RSD:" },
 	{ "TLL:" },
 	{ "TTM:" },
-	{ "___"},
+	{ "___:"},
 	{ "RSA:" },
-	{ "___"},
+	{ "___:"},
 	{ "AAM:" },
 	{ "APA:" },
 	{ "APB:" },
-	{ "___"},
+	{ "___:"},
 	{ "ALR:" },
 	{ "EVE:" },
 	{ "TXT:" },
-	{ "OTHER:" },
-	{ "___"},
+	{ "OTH:" },
+	{ "___:"}
 	};
 
 	/************************************************************
@@ -504,4 +498,5 @@ private:
 
 };
 
-using nmeaCfgEEPROM_t = NMEA::nmeaCfgEEPROM_t;
+
+

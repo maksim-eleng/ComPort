@@ -1,10 +1,4 @@
 #pragma once
-/*******************************************************
-	Класс для организации кольцевого буфера
-
-
-
-*/
 
 #include "SysConst.h"
 #include <stdint.h>
@@ -15,11 +9,6 @@
 
 #ifndef BUF_TYPE_CYCLICAL
 #define BUF_TYPE_LINEAR
-#endif
-
-// minimum buffer size. default for dynamic data
-#ifndef MIN_BUF_SIZE
-#define MIN_BUF_SIZE	256
 #endif
 
 // disable/enuble interrupt for controller system
@@ -39,37 +28,31 @@ public:
 	static constexpr auto resultNG = -1;
 	static constexpr auto notCfg = -1;
 
+
+	Buffer() = default;
+
 	/****************************************************
 	 * @brief	Constructor. Create buffer dynamically. By default with MIN_BUFFER_SIZE size
 	 * @param size <int> - size of buffer
 	 * @Create of object:	Buffer buf;	Buffer buf(NULL); - dynamic memory allocation with size=MIN_BUFFER_SIZE
 	 *										Buffer buf(NULL, 100); - dynamic memory allocation with size=100
 	*****************************************************/
-	Buffer(unsigned size = MIN_BUF_SIZE);
-
-	// Constructor of copy
-	Buffer(const Buffer& buf);
-
-	// Constructor for move
-	Buffer(Buffer&& buf) noexcept;
-	/**
-	 * @brief 
-	 * @param buf 
-	 * @return 
-	*/
-	const Buffer& operator=(const Buffer& buf);
-	
-	/**
-	 * @brief 
-	 * @param buf 
-	 * @return 
-	*/
-	const Buffer& operator=(Buffer&& buf) noexcept;
+	Buffer(unsigned size);
 
 	/****************************************************
-	 * @brief	Destructor. If nenory for buffer was allocated dynamically - release
+	* @brief	Destructor. If nenory for buffer was allocated dynamically - release
 	*****************************************************/
 	~Buffer();
+
+	// Copy sematics
+	Buffer(const Buffer& buf);
+
+	const Buffer& operator=(const Buffer& buf);
+
+	// Move sematics
+	Buffer(Buffer&& buf) noexcept;
+	
+	const Buffer& operator=(Buffer&& buf) noexcept;
 
 	/****************************************************
 	 * @brief	Put char in buffer
@@ -107,7 +90,7 @@ public:
 	 *						or 	bufResultIsNG - terminator not
 	 *						found before buffer is empty
 	*****************************************************/
-	int put(std::string& str, char eofChar = '\0');
+	int put(const std::string& str, char eofChar = '\0');
 
 	/****************************************************
 	 * @brief	Get byte from buffer, if buffer is not empty
@@ -121,7 +104,7 @@ public:
 	 * for read operation. Buffer's index does not change.
 	 * @return <char> or bufResultIsNG if buffer is empty
 	*****************************************************/
-	char get(int& index);
+	char get(unsigned& index);
 
 	/****************************************************
 	 * @brief	Get string from buffer to external buffer while EOF not
@@ -131,12 +114,12 @@ public:
 	 * If function complete with error, the buffer returns
 	 * to previous state.
 	 * @param str <char*> - external buffer for destination.
-	 * @param sizeStr <int> - size of external buffer
+	 * @param sizeStr <unsigned> - size of external buffer
 	 * @return next buffer's index for read operation
 	 *						or 	bufResultIsNG - terminator not 
 	 *						found before buffer is empty
 	*****************************************************/
-	int get(char* str, int sizeStr, char eofChar = '\0');
+	int get(char* str, unsigned sizeStr, char eofChar = '\0');
 
 	/****************************************************
 	 * @brief	Get string from std::string to external buffer while EOF not
@@ -179,15 +162,15 @@ public:
 
 	/***********************************************************
 	 * @brief Set buffer index for Write operation, if index in buffer range.
-	 * @param newIndexForWrite <int> - new index. Must be >=0 && < size of buffer
+	 * @param newIndexForWrite <unsigned> - new index. Must be >=0 && < size of buffer
 	************************************************************/
-	void setIndexForWrite(int newIndexForWrite);
+	void setIndexForWrite(unsigned newIndexForWrite);
 
 	/***********************************************************
 	 * @brief Set buffer index for Read operation, if index in buffer range.
-	 * @param newIndexForWrite <int> - new index. Must be >=0 && < size of buffer
+	 * @param newIndexForWrite <unsigned> - new index. Must be >=0 && < size of buffer
 	************************************************************/
-	void setIndexForRead(int newIndexForRead);
+	void setIndexForRead(unsigned newIndexForRead);
 
 	/***********************************************************
 	 * @brief Reset all buffer's index in start of buffer state.
@@ -204,99 +187,31 @@ public:
 
 	/***********************************************************
 	 * @brief operator= group is similar of put(),
-	 * but with clear of buffer
+	 * but with clear of buffer before
 	************************************************************/
-	
-	/****************************************************
-	* @brief	Put char in buffer. 
-	* The buffer will be cleared before put.
-	* @param byte <const char> - input char
-	* @return next index of buffer for write operation
-			or bufResultNG, if buffer is full
-	*****************************************************/
-	int operator=(const char byte);
-
-	/****************************************************
-	 * @brief	Put string to buffer from external buffer while EOF not
-	 * will be copied to buffer or terminator not detected in input str
-	 * (terminator not copying, if not equal of EOF char)
-	 * The buffer will be cleared before put.
-	 * If data in input str starts with '\0' - not copy.
-	 * If function complete with error, the buffer returns
-	 * to previous state.
-	 * @param str <char*> - external buffer for copy to buffer.
-	 * @param eofChar <char> - EOF char
-	 * @return next buffer's index for read operation
-	 *						or 	bufResultIsNG - terminator not
-	 *						found before buffer is empty
-	*****************************************************/
-	int operator=(const char* str);
-
-	/****************************************************
-	 * @brief	Put string to buffer from external std::string while EOF not
-	 * will be copied to buffer or terminator not detected in input str
-	 * (terminator not copying, if not equal of EOF char)
-	 * The buffer will be cleared before put.
-	 * If data in input str starts with '\0' - not copy.
-	 * If function complete with error, the buffer returns
-	 * to previous state.
-	 * @param str <std::string> - external std::string for copy to buffer.
-	 * @param eofChar <char> - EOF char
-	 * @return next buffer's index for read operation
-	 *						or 	bufResultIsNG - terminator not
-	 *						found before buffer is empty
-	*****************************************************/
-	int operator=(std::string& str);
+	template<typename T>
+	inline int operator=(T& data)
+	{
+		resetIndex();
+		return put(data);
+	}
 
 	/***********************************************************
 	* @brief operator+= group is similar of put()
 	************************************************************/
+	template<typename T>
+	inline int operator+=(T& data)
+	{
+		return put(data);
+	}
 
-	/****************************************************
-	* @brief	Put char in buffer.
-	* @param byte <const char> - input char
-	* @return next index of buffer for write operation
-			or bufResultNG, if buffer is full
-	*****************************************************/
-	int operator+=(const char byte);
-
-	/****************************************************
-	 * @brief	Put string to buffer from external buffer while EOF not
-	 * will be copied to buffer or terminator not detected in input str
-	 * (terminator not copying, if not equal of EOF char)
-	 * The buffer will be cleared before put.
-	 * If data in input str starts with '\0' - not copy.
-	 * If function complete with error, the buffer returns
-	 * to previous state.
-	 * @param str <char*> - external buffer for copy to buffer.
-	 * @param eofChar <char> - EOF char
-	 * @return next buffer's index for read operation
-	 *						or 	bufResultIsNG - terminator not
-	 *						found before buffer is empty
-	*****************************************************/
-	int operator+=(const char* str);
-
-	/****************************************************
-	 * @brief	Put string to buffer from external std::string while EOF not
-	 * will be copied to buffer or terminator not detected in input str
-	 * (terminator not copying, if not equal of EOF char)
-	 * If data in input str starts with '\0' - not copy.
-	 * If function complete with error, the buffer returns
-	 * to previous state.
-	 * @param str <std::string> - external std::string for copy to buffer.
-	 * @param eofChar <char> - EOF char
-	 * @return next buffer's index for read operation
-	 *						or 	bufResultIsNG - terminator not
-	 *						found before buffer is empty
-	*****************************************************/
-	int operator+=(std::string& str);
 
 	/****************************************************
 	 * @brief	Get byte from buffer, with using external
 	 * integer index. This index and buffer's index does not change.
 	 * @return <char> from buffer[index]
 	*****************************************************/
-	char operator[](int index);
+	char operator[](unsigned index);
 
 	/**********	 Other function		******************/
 	/*************************************************/
@@ -313,14 +228,14 @@ public:
 	 * @brief	Search c_style string in buffer in not readed range.
 	 * Buffer's indexes don't change.
 	 * @param str <const char* str> - string for search
-	 * @param pStartInBuf <int> - start index for search. If 0 or not defined - the seach begins
+	 * @param pStartInBuf <unsigned> - start index for search. If 0 or not defined - the seach begins
 	 *		with index for read operation
 	 * @param isReturnIndAfterStr <bool>:
 	 *		if = false or not defined - the function return index in buffer where found start of input string 
 	 *		if = true - the function return next index in buffer where found end of input string
 	 * @return <int> - index of buffer or bufResultNG if not found
 	*****************************************************/
-	int search(const char* str, int pStartInBuf = 0, bool isReturnIndAfterStr = false);
+	int search(const char* str, unsigned pStartInBuf = 0, bool isReturnIndAfterStr = false);
 
 	/*****************************************************
 	 * @brief	Copy to another buffer while EOF not will be copied 
@@ -367,15 +282,15 @@ protected:
 private:
 
 	//pointer for next write operation in buffer
-	int volatile m_front = 0;
+	unsigned volatile m_front = 0;
 	//pointer for next read operation from buffer
-	int volatile m_end = 0;
+	unsigned volatile m_end = 0;
 	#ifdef BUF_TYPE_CYCLICAL
 	// leng of data occupied area
-	int volatile m_len = 0;
+	unsigned volatile m_len = 0;
 	#endif
 	// size of buffer
-	int m_size = 0;						// size of buffer
+	unsigned m_size = 0;			// size of buffer
 	char* m_data = nullptr;		// pointer to data area
 
 	/**********   Functions   ************/
@@ -398,5 +313,4 @@ private:
 };
 
 /************************ (C) **END OF FILE****/
-
 

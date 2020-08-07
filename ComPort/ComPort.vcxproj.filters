@@ -68,7 +68,10 @@
     <ClInclude Include="Nmea.h">
       <Filter>Файлы заголовков</Filter>
     </ClInclude>
-    <ClInclude Include="Observer.h">
+    <ClInclude Include="EEPROM.h">
+      <Filter>Файлы заголовков</Filter>
+    </ClInclude>
+    <ClInclude Include="EEPROMWin32.h">
       <Filter>Файлы заголовков</Filter>
     </ClInclude>
   </ItemGroup>

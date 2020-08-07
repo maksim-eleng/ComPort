@@ -9,8 +9,7 @@ namespace SysConst {
 	constexpr uint16_t	rxBufSize = 500;
 	constexpr uint16_t	txBufSize = 500;
 	constexpr uint8_t		nmeaMaxStrLen = 150;
-
-
+	constexpr char			nmeaCfgFileName[15] = { "d:\\config.cfg" };
 }
 
 /**************   Простые типы данных 	*******************
@@ -31,3 +30,4 @@ namespace SysConst {
 #define OK	1
 #define On	1
 #define LOCK	1
+

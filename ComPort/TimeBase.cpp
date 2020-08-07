@@ -7,82 +7,63 @@ TimeBase::TimeBase(tBaseEvtMsk_t evtMsk)
 {
 	addEvent(evtMsk);
 }
-
-/**************************************************/
-bool TimeBase::addEvent(tBaseEvtMsk_t evtMsk)
-{
-	if (checkEvtMskForSet(evtMsk)) {
-		m_evtMsk = m_evtMsk | evtMsk;
-		return true;
-	}
-	return false;
-}
-
-/**************************************************/
-void TimeBase::removeEvent(tBaseEvtMsk_t evtMsk)
-{
-	m_evtMsk = (tBaseEvtMsk_t)(m_evtMsk & (~evtMsk));
-}
-
 /**************************************************/
 bool TimeBase::addObserver(IObsTimeBase& obs, tBaseEvtMsk_t evtMsk)
 {
 	if (addEvent(evtMsk)) {
+		// search obs. Add mask if found or add obs with current musk, if not
 		for (auto& _obs : m_observers) {
 			if (_obs.pToObs == &obs) {
-				_obs.evtMsk = _obs.evtMsk | evtMsk;
+				_obs.evtMsk = static_cast<tBaseEvtMsk_t>(_obs.evtMsk | static_cast<tBaseEvtMsk_t>(evtMsk));
 				return true;
 			}
 		}
-		tBaseObs_t object = { &obs, evtMsk };
-		m_observers.push_back(object);
+		tBaseObs_t _obj = { &obs, evtMsk };
+		m_observers.push_back(_obj);
 		return true;
 	}
 	return false;
 }
 
 /**************************************************/
-void TimeBase::removeObserver(IObsTimeBase& obs)
+void TimeBase::removeObserver(const IObsTimeBase& obs)
 {
-	tBaseEvtMsk_t obsMsk = EVT_NO;
-	std::vector<tBaseObs_t>::iterator pObs;
-
-	for (pObs = m_observers.begin(); pObs != m_observers.end(); ++pObs) {
-		if (&obs == pObs->pToObs) {
-			obsMsk = pObs->evtMsk;
-			m_observers.erase(pObs);
-			break;
+	std::vector<tBaseObs_t>::iterator it;
+	std::vector<tBaseObs_t>::iterator itForDel;
+	tBaseEvtMsk_t resMsk = EVT_NO;
+	for (it = m_observers.begin(); it != m_observers.end(); ++it) {
+		if (&obs != it->pToObs) {
+			resMsk = static_cast<tBaseEvtMsk_t> (resMsk | it->evtMsk);
+		}
+		else {
+			itForDel = it;
 		}
 	}
-
-	bool fl = true;
-	tBaseEvtMsk_t resMsk = EVT_NO;
-	for (pObs = m_observers.begin(); pObs != m_observers.end(); ++pObs) {
-		resMsk = resMsk | pObs->evtMsk;
+	if (itForDel._Ptr) {
+		m_observers.erase(itForDel);
+		removeEvent(static_cast<tBaseEvtMsk_t>(~resMsk));
 	}
-	removeEvent((tBaseEvtMsk_t)(~resMsk));
-
 }
 
 /**************************************************/
-std::vector<TimeBase::tBaseObs_t>& TimeBase::getObservers()
+const std::vector<TimeBase::tBaseObs_t>& TimeBase::getObservers()
 {
 	return m_observers;
 }
 
 /**************************************************/
-void TimeBase::notifyObservers(const tBaseEvtMsk_t evtMsk)
+void TimeBase::notifyObservers(tBaseEvtMsk_t evtMsk)
 {
 	for (auto& obs : m_observers) {
-		tBaseEvtMskInt_t mask = obs.evtMsk & evtMsk;
+		tBaseEvtMsk_t mask = static_cast<tBaseEvtMsk_t>(obs.evtMsk & evtMsk);
 		if (mask) {
-			obs.pToObs->handleEvent(*this, (tBaseEvtMsk_t)mask);
+			obs.pToObs->handleEvent(*this, mask);
 		}
-	}
+	} 
 }
 
 /**************************************************/
-std::string& TimeBase::getTime()
+const std::string& TimeBase::getTimeStr()
 {
 	m_timeStr = convTimeFieldToStr(m_time.hour);
 	m_timeStr += ':';
@@ -93,7 +74,7 @@ std::string& TimeBase::getTime()
 }
 
 /**************************************************/
-std::string& TimeBase::getDate()
+const std::string& TimeBase::getDateStr()
 {
 	m_dateStr = convTimeFieldToStr(m_time.day);
 	m_dateStr += '.';
@@ -101,6 +82,22 @@ std::string& TimeBase::getDate()
 	m_dateStr += '.';
 	m_dateStr += convTimeFieldToStr(m_time.year);
 	return m_dateStr;
+}
+
+/**************************************************/
+bool TimeBase::addEvent(tBaseEvtMsk_t evtMsk)
+{
+	if (checkEvtMskForSet(evtMsk)) {
+		m_evtMsk = static_cast<tBaseEvtMsk_t>(m_evtMsk | evtMsk);
+		return true;
+	}
+	return false;
+}
+
+/**************************************************/
+void TimeBase::removeEvent(tBaseEvtMsk_t evtMsk)
+{
+	m_evtMsk = static_cast<tBaseEvtMsk_t>(m_evtMsk & (~evtMsk));
 }
 
 /**************************************************/
@@ -128,8 +125,8 @@ inline TimeBase::tBaseEvtMsk_t TimeBase::clkIncrement()
 	};
 
 	static uint32_t cnt = 0;
-	tBaseEvtMskInt_t evtRes = EVT_NO;
-	tBaseEvtMskInt_t tmpMsk = m_evtMsk;
+	unsigned evtRes = EVT_NO;
+	unsigned tmpMsk = m_evtMsk;
 	int pos = 0;
 
 	while (tmpMsk) {
@@ -167,7 +164,7 @@ inline TimeBase::tBaseEvtMsk_t TimeBase::clkIncrement()
 	if (++cnt > 1E6L)
 		cnt = 0;
 
-	return (tBaseEvtMsk_t)evtRes;
+	return static_cast<tBaseEvtMsk_t>(evtRes);
 }
 
 /**************************************************/
@@ -188,7 +185,7 @@ std::string TimeBase::convTimeFieldToStr(unsigned int num)
 bool TimeBase::checkEvtMskForSet(tBaseEvtMsk_t evtMsk)
 {
 	unsigned int multiplier = 1;
-	tBaseEvtMskInt_t tmpMsk = evtMsk;
+	unsigned tmpMsk = evtMsk;
 
 	while (!(tmpMsk & (1 << 0))) {
 		tmpMsk >>= 1;
@@ -200,7 +197,3 @@ bool TimeBase::checkEvtMskForSet(tBaseEvtMsk_t evtMsk)
 	return false;
 }
 
-TimeBase::tBaseEvtMsk_t& operator|(TimeBase::tBaseEvtMsk_t& l, const TimeBase::tBaseEvtMsk_t& r)
-{
-	return l = static_cast<TimeBase::tBaseEvtMsk_t>(l | static_cast<TimeBase::tBaseEvtMskInt_t>(r));
-}

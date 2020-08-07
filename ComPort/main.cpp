@@ -9,30 +9,38 @@
 #include "utility.h"
 #include <iostream>
 #include "Nmea.h"
-using namespace std;
+#include "EEPROM.h"
+
+
 
 TimeBase sysClk; 
-
-
-nmeaCfgEEPROM_t nmeaCfgEEPROM;
-
 std::vector<ComPort>com;
-
-NMEA nmea(nmeaCfgEEPROM, com, sysClk);
 
 
 int main(int argc, char* argv[])
 {
+	// Config system
+	EEPROM eeprom(SysConst::nmeaCfgFileName);
+	//NMEA nmea(eeprom, com, sysClk);
+	//NMEA n;
+	//bool res = eeprom.isErased();
+	//int i = sizeof(eeprom);
+
+
+
 	EventSystem evt;
 	sysClk.addObserver(evt, sysClk.EVT_1S);
 	// NMEA class doesn't add event's object as observer.
 	// Add event system as observer for processing input string after NMEA
-	com[0].addObserver(evt);
-	com[1].addObserver(evt);
+	com[0].addObserver(evt, ComPort::EVT_RX_USER_CHAR);
+	com[1].addObserver(evt, ComPort::EVT_RX_USER_CHAR);
 
 	com[0] << "Hello CH0!\n";
 	com[1] << "Hello CH1!\n";
-	
+
+ 
+
+
 	while (1) {
 	
 		
@@ -40,7 +48,6 @@ int main(int argc, char* argv[])
 		
 
 	} // end while(1)
-
 
 
 

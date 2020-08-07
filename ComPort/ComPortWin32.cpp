@@ -4,7 +4,27 @@
 #include <assert.h>
 #include <iostream>
 
-uint8_t ComPortWin32::m_numOfObject = 0;
+uint8_t ComPortWin32::m_numOfObjects = 0;
+
+
+/***********************************************************/
+ComPortWin32::ComPortWin32(TimeBase& sysClk,
+  unsigned sizeRxBuf, unsigned sizeTxBuf)
+  :m_rxBuf(sizeRxBuf), m_txBuf(sizeTxBuf),
+  m_pSysClk(&sysClk)
+{
+  std::cout << "ComWin32 constructor. & = " << this << "\n";
+  ++m_numOfObjects;
+}
+
+/***********************************************************/
+ComPortWin32::~ComPortWin32()
+{
+  std::cout << "ComWin32 destructor. & = " << this << " destroyed.\n";
+  --m_numOfObjects;
+  if(!m_numOfObjects)
+    close();
+}
 
 
 /********************************************************
@@ -21,7 +41,7 @@ ComPortWin32& ComPortWin32::operator=(ComPortWin32&& com) noexcept
   if (this == &com)
     return *this;
   // destructer will be called after move operation and --m_numOfObject in destructor
-  ++m_numOfObject;
+  ++m_numOfObjects;
   // move or copy all variables
   m_rxBuf = std::move(com.m_rxBuf);
   m_txBuf = std::move(com.m_txBuf);
@@ -36,43 +56,14 @@ ComPortWin32& ComPortWin32::operator=(ComPortWin32&& com) noexcept
   return *this;
 }
 
-
-
-
-/***********************************************************/
-ComPortWin32::ComPortWin32(TimeBase& sysClk,
-  int sizeRxBuf, int sizeTxBuf)
-  :m_rxBuf(sizeRxBuf), m_txBuf(sizeTxBuf)
-{
-  std::cout << "ComWin32 constructor. & = " << this << "\n";
-  m_pSysClk = &sysClk;
-  ++m_numOfObject;
-}
-
-/***********************************************************/
-ComPortWin32::~ComPortWin32()
-{
-  std::cout << "ComWin32 destructor. & = " << this << " destroyed.\n";
-  --m_numOfObject;
-  if(!m_numOfObject)
-    close();
-}
-
-
 /***********************************************************/
 ComPortWin32::comEvtSetMsk_t operator|(ComPortWin32::comEvtSetMsk_t l, ComPortWin32::comEvtSetMsk_t r)
 {
-  return (ComPortWin32::comEvtSetMsk_t)(l | (unsigned int)r);
+  return static_cast<ComPortWin32::comEvtSetMsk_t>(l | static_cast<unsigned>(r));
 }
 
 /***********************************************************/
-void operator|=(ComPortWin32::comEvtSetMsk_t& l, const ComPortWin32::comEvtSetMsk_t& r)
-{
-  l = l | r;
-}
-
-/***********************************************************/
-ComPortWin32::comEvtMsk_t ComPortWin32::setParam(ComPortWin32::comCfg_t& ref)
+ComPortWin32::comEvtMsk_t ComPortWin32::setParam(const ComPortWin32::comCfg_t& ref)
 {
   // modified mirror of comCfg_t m_cfg if field in comCfg_t ref was defined
   comCfg_t set = m_cfg;
@@ -90,7 +81,7 @@ ComPortWin32::comEvtMsk_t ComPortWin32::setParam(ComPortWin32::comCfg_t& ref)
   }
 
   // permis event for rx any char (default)
-  set.evtSet |= EVTSET_RX_CHAR;
+  set.evtSet = set.evtSet | EVTSET_RX_CHAR;
   // set default parameters in dcb, timeout,...
   dcb.fBinary = true;   // binary use only
   dcb.fOutX = false;    // hardware control not used
@@ -155,13 +146,13 @@ ComPortWin32::comEvtMsk_t ComPortWin32::setParam(ComPortWin32::comCfg_t& ref)
   if (ref.evtChar != COM_NOT_CFG) {
     set.evtChar = ref.evtChar;
     dcb.EvtChar = ref.evtChar;
-    set.evtSet |= EVTSET_RX_USER_CHAR;
+    set.evtSet = set.evtSet | EVTSET_RX_USER_CHAR;
   }
   if (ref.evtSet != EVTSET_NOT_SET) {
     if (fPortReady) {
       fPortReady = GetCommMask(m_hPort, &evtMask);
       if (fPortReady) {
-        set.evtSet |= (ref.evtSet | (comEvtSetMsk_t)evtMask);
+        set.evtSet = set.evtSet | (ref.evtSet | static_cast<comEvtSetMsk_t>(evtMask));
       }
     }
   }
@@ -233,7 +224,7 @@ HANDLE ComPortWin32::openHandle(unsigned comNum)
   }
 
   // open file
-  hPort = CreateFile( portNum,	/*lpFileName*/
+  hPort = CreateFile( portNum,	  /*lpFileName*/
     GENERIC_READ | GENERIC_WRITE,	/*dwDesiredAccess - open for RW*/
     0,								            /*dwShareMode. Must be always 0 for COM*/
     NULL,							            /*lpSecurityAttributes. Must be always 0 for COM*/
@@ -290,7 +281,7 @@ ComPortWin32::comEvtMsk_t ComPortWin32::open( unsigned comNum, comBaud_t baud )
   // forming result of operation 
   // subscribe to sysClk for periodically interview of WIN32 rx Buffer
   if (fPortReady) {
-    subscribe(*m_pSysClk, TimeBase::EVT_10MS);
+    m_pSysClk->addObserver(*this, TimeBase::EVT_10MS);
     m_cfg.number = comNum;
     m_cfg.baud = baud;
   }
@@ -303,7 +294,7 @@ ComPortWin32::comEvtMsk_t ComPortWin32::open( unsigned comNum, comBaud_t baud )
 }
 
 /***********************************************************/
-ComPortWin32::comEvtMsk_t ComPortWin32::open( const char* const comName, comBaud_t baud )
+ComPortWin32::comEvtMsk_t ComPortWin32::open(const char* const comName, comBaud_t baud )
 {
   int i = 0;
   // Convert str to uint
@@ -324,13 +315,9 @@ ComPortWin32::comEvtMsk_t ComPortWin32::openFirstFree(unsigned& startComNum, com
 }
 
 /***********************************************************/
-void ComPortWin32::close()
+bool ComPortWin32::isPortOpened() const
 {
-  if (m_hPort != INVALID_HANDLE_VALUE) {
-    CloseHandle(m_hPort);
-    m_hPort = INVALID_HANDLE_VALUE;
-    m_pSysClk->removeObserver(*this);
-  }
+  return m_hPort != INVALID_HANDLE_VALUE;
 }
 
 /***********************************************************/
@@ -345,12 +332,17 @@ ComPortWin32::comEvtMsk_t ComPortWin32::reopen()
 }
 
 /***********************************************************/
-bool ComPortWin32::isPortOpened() const
+void ComPortWin32::close()
 {
-  return m_hPort != INVALID_HANDLE_VALUE;
+  if (m_hPort != INVALID_HANDLE_VALUE) {
+    CloseHandle(m_hPort);
+    m_hPort = INVALID_HANDLE_VALUE;
+    m_pSysClk->removeObserver(*this);
+  }
 }
 
-int ComPortWin32::userCharGetReceivedCounter() const
+/***********************************************************/
+int ComPortWin32::getUserCharReceivedCounter() const
 {
   return m_evtCharCnt;
 }
@@ -376,8 +368,7 @@ int ComPortWin32::getBaud() const
 /******************************************************/
 void ComPortWin32::setEvent(comEvtMsk_t& events, comEvtMsk_t mask)
 {
-  uint32_t tmp = events;
-  events = (comEvtMsk_t)(tmp | mask);
+  events = static_cast<comEvtMsk_t>(events | mask);
 }
 
 /******************************************************/
@@ -397,9 +388,9 @@ ComPortWin32::comEvtMsk_t ComPortWin32::startTx()
   DWORD len = 0;
   int cnt = 0;
 
-  int index = m_txBuf.getIndexForRead();
-
-  while (index != m_txBuf.getIndexForWrite()) // don't use < for cyclical buffer
+  unsigned index = m_txBuf.getIndexForRead();
+  unsigned end = m_txBuf.getIndexForWrite();
+  while (index != end) // don't use < for cyclical buffer
   {
     // buffering data
     char data;
@@ -465,13 +456,6 @@ bool ComPortWin32::print(const char* cstr)
     return false;
   }
   return true;
-}
-
-/**************************************************************/
-bool ComPortWin32::subscribe(TimeBase& sysClk, TimeBase::tBaseEvtMsk_t evtMsk)
-{
-  m_pSysClk = &sysClk;
-  return sysClk.addObserver(*this, evtMsk);
 }
 
 /***********************************************************/

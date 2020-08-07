@@ -18,23 +18,14 @@ Buffer::Buffer(unsigned size)
 
 /**********************************************************/
 Buffer::Buffer(const Buffer& buf)
-	:m_data(new (std::nothrow) char[buf.m_size])
+//	:m_data(new (std::nothrow) char[buf.m_size])
 {
 	std::cout << "Copy constructor of buffer. *" << this << " = *" << &buf << "\n";
-	if (!m_data)	
-		exit(1);
-	copyIndex(buf);
-	memcpy(this->m_data, buf.m_data, sizeof(this->m_data));
-}
-
-/**********************************************************/
-Buffer::Buffer(Buffer&& buf) noexcept
-{
-	std::cout << "Move constructor of buffer. *" << this << " = *" << &buf << "\n";
-	delete[] m_data;
-	m_data = buf.m_data;
-	buf.m_data = nullptr;
-	copyIndex(buf);
+	*this = buf;
+	//if (!m_data)	
+	//	exit(1);
+	//copyIndex(buf);
+	//memcpy(this->m_data, buf.m_data, sizeof(this->m_data));
 }
 
 /**********************************************************/
@@ -49,6 +40,13 @@ const Buffer& Buffer::operator=(const Buffer& buf)
 	copyIndex(buf);
 	memcpy(this->m_data, buf.m_data, sizeof(this->m_data));
 	return *this;
+}
+
+/**********************************************************/
+Buffer::Buffer(Buffer&& buf) noexcept
+{
+	std::cout << "Move constructor of buffer. *" << this << " = *" << &buf << "\n";
+	*this = static_cast<Buffer&&>(buf);
 }
 
 /**********************************************************/
@@ -116,8 +114,8 @@ int Buffer::put(char byte)
 int Buffer::put(const char* str, char eofChar)
 {
 	assert(str);
-	int i = 0;
-	int ind = m_front;
+	unsigned i = 0;
+	unsigned ind = m_front;
 	char data = notCfg;
 	int res = resultNG;
 
@@ -141,7 +139,7 @@ int Buffer::put(const char* str, char eofChar)
 }
 
 /**********************************************************/
-int Buffer::put(std::string& str, char eofChar)
+int Buffer::put(const std::string& str, char eofChar)
 {
 	return put(str.c_str(), eofChar);
 }
@@ -181,7 +179,7 @@ char Buffer::get()
 }
 
 /**********************************************************/
-char Buffer::get(int& index)
+char Buffer::get(unsigned& index)
 {
 	#ifdef BUF_TYPE_LINEAR
 	char data = resultNG;
@@ -209,7 +207,7 @@ char Buffer::get(int& index)
 }
 
 /**********************************************************/
-int Buffer::get(char* str, int sizeStr, char eofChar)
+int Buffer::get(char* str, unsigned sizeStr, char eofChar)
 {
 	assert(str && sizeStr);
 	int i = 0;
@@ -306,7 +304,7 @@ bool Buffer::checkIsEpty() const {
 }
 
 /*****************************************************/
-void Buffer::setIndexForWrite(int newIndexForWrite)
+void Buffer::setIndexForWrite(unsigned newIndexForWrite)
 {
 	if (newIndexForWrite >= 0 && newIndexForWrite < m_size) {
 		DISABLE_INTERRUPT;
@@ -319,7 +317,7 @@ void Buffer::setIndexForWrite(int newIndexForWrite)
 }
 
 /*****************************************************/
-void Buffer::setIndexForRead(int newIndexForRead)
+void Buffer::setIndexForRead(unsigned newIndexForRead)
 {
 	if (newIndexForRead >= 0 && newIndexForRead < m_size) {
 		DISABLE_INTERRUPT;
@@ -361,43 +359,7 @@ void Buffer::copyIndex(const Buffer& srcBuf)
 }
 
 /*****************************************************/
-int Buffer::operator=(const char byte)
-{
-	resetIndex();
-	return put(byte);
-}
-
-/*****************************************************/
-int Buffer::operator=(const char* str)
-{
-	resetIndex();
-	return put(str);
-}
-
-/*****************************************************/
-int Buffer::operator=(std::string& str)
-{
-	resetIndex();
-	return put(str);
-}
-
-/*****************************************************/
-int Buffer::operator+=(const char byte) {
-	return put(byte);
-}
-
-/*****************************************************/
-int Buffer::operator+=(const char* str) {
-	return put(str);
-}
-
-/*****************************************************/
-int Buffer::operator+=(std::string& str) {
-	return put(str);
-}
-
-/*****************************************************/
-char Buffer::operator[](int index)
+char Buffer::operator[](unsigned index)
 {
 	assert(index >= 0 && index < m_size - 1);
 	return m_data[index];
@@ -406,7 +368,7 @@ char Buffer::operator[](int index)
 /*****************************************************/
 int Buffer::search(char byte)
 {
-	int point = m_end, tmp_p;
+	unsigned point = m_end, tmp_p;
 	while (point != m_front) {
 		tmp_p = point;
 		if (byte == get(point))
@@ -416,7 +378,7 @@ int Buffer::search(char byte)
 }
 
 /*****************************************************/
-int Buffer::search(const char* str, int pStartInBuf, bool isReturnIndAfterStr)
+int Buffer::search(const char* str, unsigned pStartInBuf, bool isReturnIndAfterStr)
 {
 	assert(str);
 	if (!pStartInBuf || pStartInBuf < m_end)
@@ -449,8 +411,8 @@ int Buffer::search(const char* str, int pStartInBuf, bool isReturnIndAfterStr)
 /*****************************************************/
 bool Buffer::copyStrTo(Buffer& dstBuf, char eofChar)
 {
-	int end = m_end;
-	int front = dstBuf.m_front;
+	unsigned end = m_end;
+	unsigned front = dstBuf.m_front;
 	char data = '\0';
 
 	while (data == '\0') {
@@ -507,7 +469,7 @@ bool Buffer::transferStrTo(Buffer& dstBuf, char eofChar)
 void Buffer::clear()
 {
 	DISABLE_INTERRUPT;
-	for (int i = 0; i < m_size; ++i)
+	for (unsigned i = 0; i < m_size; ++i)
 		m_data[i] = 0;
 	resetIndex();
 }
@@ -516,8 +478,8 @@ void Buffer::clear()
 #ifdef BUF_TYPE_LINEAR
 void Buffer::transferOnBeginOfBuffer()
 {
-	int i = 0;
-	int k = m_end;
+	unsigned i = 0;
+	unsigned k = m_end;
 	DISABLE_INTERRUPT;
 	while (k < m_front) {
 		m_data[i] = m_data[k];

@@ -23,12 +23,11 @@ class IObsTimeBase;
 ***************************************************************/
 class TimeBase : public TimeBase_t
 {
-	using tBaseEvtMskInt_t = uint8_t;
 
 public:
 
 	// mask of events. 
-	typedef enum EVT_TIME__ENUM: tBaseEvtMskInt_t
+	typedef enum EVT_TIME__ENUM: uint8_t
 	{
 		EVT_NO,
 		EVT_1US		= (1 << 0),
@@ -61,13 +60,24 @@ public:
 	********************************************************************/
 	TimeBase(tBaseEvtMsk_t evtMask);
 
+	// copy constructor
+	TimeBase(const TimeBase&) = delete;
+	// move constructor
+	TimeBase(TimeBase&&) = delete;
+	// copy operator=
+	TimeBase& operator=(const TimeBase&) = delete;
+	// move operator=
+	TimeBase& operator=(TimeBase&&) = delete;
+
+
+
 	/*******************************************************************
 	 * @brief	Add observer for event to another objects.
 	 * @param obs <IObsTimeBase&> - object of observer that inherits IObsTimeBase
 	 * @param evtMsk <evtMask_t> - mask of events for observer. TimeBase
 	 *					will be event to observer only mask is set
 	 * @return	true - ok
-	 *					false - desired mask < SysConst::clkTimeBase and can't be set
+	 *					false - mask can't be set
 	********************************************************************/
 	bool addObserver(IObsTimeBase& obs, tBaseEvtMsk_t evtMsk);
 	
@@ -76,13 +86,13 @@ public:
 	 * @brief Remove observer form TimeBase object
 	 * @param obs <IObsTimeBase&> - object that inherits IObsTimeBase
 	********************************************************************/
-	void removeObserver(IObsTimeBase& obs);
+	void removeObserver(const IObsTimeBase& obs);
 
 	/*******************************************************************
 	* @brief Get observers vector for TimeBase object  
-	* @return 
+	* @return const vector
 	********************************************************************/
-	std::vector<tBaseObs_t>& getObservers();
+	const std::vector<tBaseObs_t>& getObservers();
 
 	/*******************************************************************
 	 * @brief Main loop using from parent class SysTimeBase_t.
@@ -96,13 +106,13 @@ public:
 	 * @brief		Get system time in string format "hh:mm:ss"
 	 * @return <string>=""hh:mm:ss""
 	********************************************************************/
-	std::string& getTime();
+	const std::string& getTimeStr();
 
 	/*******************************************************************
 	 * @brief		Get system date in string format "dd:mm:yy"
 	 * @return <string>=""hh:mm:ss""
 	********************************************************************/
-	std::string& getDate();
+	const std::string& getDateStr();
 
 
 
@@ -152,7 +162,7 @@ private:
 	* @param events <obsEvtCode_t> - mask for events that occured 
 	(reason of call. May be used by observer for hanle the event
 	***********************************************/
-	void notifyObservers(const tBaseEvtMsk_t events);
+	void notifyObservers(tBaseEvtMsk_t events);
 
 	/******************************************************************
 	 * @brief	*** Event handler for inherited TimeBase_t (like us TimeBaseWin32) class
@@ -185,10 +195,9 @@ private:
 	*******************************************************************/
 	bool checkEvtMskForSet(tBaseEvtMsk_t evtMsk);
 
-	friend tBaseEvtMsk_t& operator|(tBaseEvtMsk_t& l, const tBaseEvtMsk_t& r);
-
-
 };
+
+
 
 
 /*********************************************************************
