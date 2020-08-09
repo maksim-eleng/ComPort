@@ -3,6 +3,7 @@
 #include "ComPort.h"
 #include "TimeBase.h"
 #include "SysConst.h"
+#include "EepromFactory.h"
 
 /***********************	MACROS	***************************
 ************************************************************/
@@ -15,7 +16,10 @@
 /************************************************************
  * @brief
 ************************************************************/
-class NMEA : public IObsTimeBase, public IObsComPort
+class NMEA : 
+	public IObsTimeBase, 
+	public IObsComPort
+	
 {
 	static constexpr char StartSymbol = '$';			// symbol of start NMEA string
 	static constexpr char AISStartSymbol = '!';		// symbol of start AIS NMEA string
@@ -181,7 +185,9 @@ public:
 	*/
 	NMEA(nmeaCfgEEPROM_t& nmeaCfgEEPROM, std::vector<ComPort>& com, TimeBase& sysClk);
 
-	
+
+
+
 private:
 
 	/************************************************************

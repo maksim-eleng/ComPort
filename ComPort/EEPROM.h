@@ -2,8 +2,6 @@
 #ifndef __EEPROM_H
 #define __EEPROM_H
 
-
-
 /*****************************************************
 * @brief Change include and using according base system.
 ComPortWin32 class working in win32 system
@@ -59,10 +57,6 @@ public:
 				d = p[i];
 		}
 		return (static_cast<long>(c) * 100 / sizeof(m_struct) <= 50) ? true : false;
-	}
-
-	sysEEPROMSets_t& getStruct() {
-		return m_struct;
 	}
 
 

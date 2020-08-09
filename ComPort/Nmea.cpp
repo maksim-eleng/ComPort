@@ -87,7 +87,7 @@ void NMEA::setCfgDefault(nmeaCfgEEPROM_t& cfgEEPROM, char ch)
 	nmeaCfgEEPROM_t::CFG_CHANNEL_EEPROM_STRUCT& chCfg = cfgEEPROM.chCfg[ch];
 	bool isTerminalCh = cfgEEPROM.numOfTerminalChannel == ch;
 	// set baud 38400 for terminal channel and 4800 for another
-	if (isTerminalCh) 
+	if (isTerminalCh)
 		//chCfg.BautRate = ComPort::B_38400;
 		chCfg.BautRate = ComPort::B_4800; // временно
 	else 

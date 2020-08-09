@@ -165,6 +165,7 @@
     <ClInclude Include="ComPort.h" />
     <ClInclude Include="ComPortWin32.h" />
     <ClInclude Include="EEPROM.h" />
+    <ClInclude Include="EepromFactory.h" />
     <ClInclude Include="EEPROMWin32.h" />
     <ClInclude Include="EventSystem.h" />
     <ClInclude Include="Nmea.h" />
