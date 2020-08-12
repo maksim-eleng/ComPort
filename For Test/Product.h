@@ -44,7 +44,7 @@ public:
     char name3[10] = "Hellow3";
   }nmeaCfgEEPROM_t;
 
-
+  nmeaCfgEEPROM_t strMas;
 
   std::string Operation() const override {
     std::string str;

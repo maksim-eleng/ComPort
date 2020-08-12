@@ -26,7 +26,7 @@ class IEeprom
 public:
 	IEeprom() = default;
 
-	virtual IEeprom* getField() = 0;
+	//virtual IEeprom* getField() = 0;
 
 	virtual ~IEeprom() {}
 };

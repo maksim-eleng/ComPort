@@ -441,12 +441,12 @@ private:
 	 * @param cfgEEPROM 
 	 * @return 
 	*/
-	void setCfgDefault(NmeaCfgEeprom& cfgEEPROM, char ch);
+	//void setCfgDefault(NmeaCfgEeprom& cfgEEPROM, char ch);
 
 	/**
 	 * @brief 
 	*/
-	void setCfgDefault(NmeaCfgEeprom& cfgEEPROM);
+	//void setCfgDefault(NmeaCfgEeprom& cfgEEPROM);
 
 	/**
 	 * @brief 
@@ -470,7 +470,7 @@ private:
 	* @param unprogValue <uint8_t> - may be like as 0xFF or 0
 	* @return <bool> false  if all field in config in unprog state
 	*/
-	bool checkCfgEEPROM(NmeaCfgEeprom& cfgEEPROM, uint8_t unprogValue);
+	//bool checkCfgEEPROM(NmeaCfgEeprom& cfgEEPROM, uint8_t unprogValue);
 
 
 
@@ -482,6 +482,24 @@ private:
 };
 
 
+typedef struct {
+	struct CFG_CHANNEL_EEPROM_STRUCT
+	{
+		NMEA::cmdPermitsEEPROM_t cmdPermits[NMEA::MAX_NMEACmdStrIndex];
+		ComPort::BAUD_ENUM BautRate;				// скорость работы UART.
+		NMEA::timeInterval_t TimeInterval;	// интервал передачи сформированных команд
+		uint8_t TIDPriorityPermis;					// 
+		// permis use in/out for UART.
+		// If prohibited - in/out may be used as io
+		struct {
+			uint8_t in : 4;	// !=0 - io используется для UART. ==0 - как IO
+			uint8_t out : 4;	// !=0 - io используется для UART. ==0 - как IO
+		}ioUsedForUART;
+	}chCfg[SysConst::maxUARTChannel];
+
+	uint8_t numOfTerminalChannel;			// channel number of UART for terminal 
+}nmeaCfgEeprom_t;
+
 /************************************************************
 * @brief Sets parameters of NMEA command, 
 * UART for store sets in EEPROM or another storage only.
@@ -490,25 +508,11 @@ class NmeaCfgEeprom:
 	public IEeprom
 {
 public:
-	struct CFG_CHANNEL_EEPROM_STRUCT
-	{
-		NMEA::cmdPermitsEEPROM_t cmdPermits[NMEA::MAX_NMEACmdStrIndex];
-		ComPort::BAUD_ENUM BautRate;				// скорость работы UART.
-		NMEA::timeInterval_t TimeInterval;	// интервал передачи сформированных команд
-		uint8_t TIDPriorityPermis;					// 
-																				// permis use in/out for UART.
-																				// If prohibited - in/out may be used as io
-		struct {
-			uint8_t in	: 4;	// !=0 - io используется для UART. ==0 - как IO
-			uint8_t out	: 4;	// !=0 - io используется для UART. ==0 - как IO
-		}ioUsedForUART;
-	}chCfg[SysConst::maxUARTChannel];
+	nmeaCfgEeprom_t nmeaCfgEeprom;
 
-	uint8_t numOfTerminalChannel;			// channel number of UART for terminal 
-
-	virtual NmeaCfgEeprom* getField() override
+	nmeaCfgEeprom_t* getField()
 	{
-		return new NmeaCfgEeprom;
+		return dynamic_cast<nmeaCfgEeprom_t*>(&nmeaCfgEeprom);
 	}
 };
 

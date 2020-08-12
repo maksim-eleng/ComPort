@@ -3,24 +3,24 @@
 
 
 /************************************************************/
-bool NMEA::checkCfgEEPROM(NmeaCfgEeprom& cfgEEPROM, uint8_t unprogValue)
-{
-	for (auto& chCfg : cfgEEPROM.chCfg) {
-		for (auto& cmd : chCfg.cmdPermits) {
-			if (cmd != unprogValue)
-				return true;
-		}
-		if (chCfg.BautRate != unprogValue || chCfg.TimeInterval != unprogValue ||
-				chCfg.TIDPriorityPermis != unprogValue ||
-				chCfg.ioUsedForUART.in != unprogValue || chCfg.ioUsedForUART.out != unprogValue) {
-			return true;
-		}
-	}
-	if (cfgEEPROM.numOfTerminalChannel != unprogValue) {
-		return true;
-	}
-	return false;
-}
+//bool NMEA::checkCfgEEPROM(NmeaCfgEeprom& cfgEEPROM, uint8_t unprogValue)
+//{
+//	for (auto& chCfg : cfgEEPROM.chCfg) {
+//		for (auto& cmd : chCfg.cmdPermits) {
+//			if (cmd != unprogValue)
+//				return true;
+//		}
+//		if (chCfg.BautRate != unprogValue || chCfg.TimeInterval != unprogValue ||
+//				chCfg.TIDPriorityPermis != unprogValue ||
+//				chCfg.ioUsedForUART.in != unprogValue || chCfg.ioUsedForUART.out != unprogValue) {
+//			return true;
+//		}
+//	}
+//	if (cfgEEPROM.numOfTerminalChannel != unprogValue) {
+//		return true;
+//	}
+//	return false;
+//}
 
 /**
  * @brief 
@@ -32,9 +32,9 @@ NMEA::NMEA(std::vector<ComPort>& com, TimeBase& sysClk)
 	:m_com(com)
 {
 	IEeprom* cfgEeprom = EepromMakerForNmea().makeObject();
-	auto cfg1 = cfgEeprom->getField();
-	
-	
+	NmeaCfgEeprom* p = dynamic_cast<NmeaCfgEeprom*>(cfgEeprom);
+	p->nmeaCfgEeprom.numOfTerminalChannel = 20;
+
 
 
 	//// check setting in EEPROM and config as default if nessessary
@@ -88,39 +88,39 @@ NMEA::NMEA(std::vector<ComPort>& com, TimeBase& sysClk)
 }
 
 /************************************************************/
-void NMEA::setCfgDefault(NmeaCfgEeprom& cfgEEPROM, char ch)
-{
-	NmeaCfgEeprom::CFG_CHANNEL_EEPROM_STRUCT& chCfg = cfgEEPROM.chCfg[ch];
-	bool isTerminalCh = cfgEEPROM.numOfTerminalChannel == ch;
-	// set baud 38400 for terminal channel and 4800 for another
-	if (isTerminalCh)
-		//chCfg.BautRate = ComPort::B_38400;
-		chCfg.BautRate = ComPort::B_4800; // временно
-	else 
-		chCfg.BautRate = ComPort::B_4800;
-
-	chCfg.TimeInterval = T_1S;
-	chCfg.TIDPriorityPermis = On;
-	chCfg.ioUsedForUART.in = On;	// used as uart
-	chCfg.ioUsedForUART.out = On;	// used as uart
-	// permis in, out only for all command for terminal channel
-	// and in only for rest
-	for (int cmd = NO; cmd < MAX_NMEACmdStrIndex; ++cmd) {
-		if (!isTerminalCh)
-			chCfg.cmdPermits[cmd] = In_E;
-		else
-			chCfg.cmdPermits[cmd] = (cmdPermitsEEPROM_t)(In_E | Out_E);
-	}
-}
+//void NMEA::setCfgDefault(NmeaCfgEeprom& cfgEEPROM, char ch)
+//{
+//	NmeaCfgEeprom::CFG_CHANNEL_EEPROM_STRUCT& chCfg = cfgEEPROM.chCfg[ch];
+//	bool isTerminalCh = cfgEEPROM.numOfTerminalChannel == ch;
+//	// set baud 38400 for terminal channel and 4800 for another
+//	if (isTerminalCh)
+//		//chCfg.BautRate = ComPort::B_38400;
+//		chCfg.BautRate = ComPort::B_4800; // временно
+//	else 
+//		chCfg.BautRate = ComPort::B_4800;
+//
+//	chCfg.TimeInterval = T_1S;
+//	chCfg.TIDPriorityPermis = On;
+//	chCfg.ioUsedForUART.in = On;	// used as uart
+//	chCfg.ioUsedForUART.out = On;	// used as uart
+//	// permis in, out only for all command for terminal channel
+//	// and in only for rest
+//	for (int cmd = NO; cmd < MAX_NMEACmdStrIndex; ++cmd) {
+//		if (!isTerminalCh)
+//			chCfg.cmdPermits[cmd] = In_E;
+//		else
+//			chCfg.cmdPermits[cmd] = (cmdPermitsEEPROM_t)(In_E | Out_E);
+//	}
+//}
 
 /************************************************************/
-void NMEA::setCfgDefault(NmeaCfgEeprom& cfgEEPROM)
-{
-	cfgEEPROM.numOfTerminalChannel = 0;
-	for (int ch = 0; ch < SysConst::maxUARTChannel; ++ch) {
-		setCfgDefault(cfgEEPROM, ch);
-	}
-}
+//void NMEA::setCfgDefault(NmeaCfgEeprom& cfgEEPROM)
+//{
+//	cfgEEPROM.numOfTerminalChannel = 0;
+//	for (int ch = 0; ch < SysConst::maxUARTChannel; ++ch) {
+//		setCfgDefault(cfgEEPROM, ch);
+//	}
+//}
 
 bool NMEA::checkCmdPermits(chFlags_t& chFl, cmdName_t cmd, cmdPermits_t permitMsk)
 {

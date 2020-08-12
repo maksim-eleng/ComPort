@@ -18,8 +18,10 @@ std::vector<ComPort>com;
 
 
 
+
 int main(int argc, char* argv[])
 {
+
 
 
 	// Config system
