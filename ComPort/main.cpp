@@ -17,80 +17,13 @@ TimeBase sysClk;
 std::vector<ComPort>com;
 
 
-// Иерархия классов игровых персонажей
-class Warrior
-{
-public:
-  virtual void info() = 0;
-  virtual ~Warrior() {}
-};
-
-class Archer : public Warrior
-{
-public:
-  void info() {
-		std::cout << "Archer" << std::endl;
-  };
-	char g;
-};
-
-class Horseman : public Warrior
-{
-public:
-  void info() {
-		std::cout << "Horseman" << std::endl;
-  };
-	char g;
-};
-
-
-// Фабрики объектов
-class Factory
-{
-public:
-	virtual Warrior* createWarrior() = 0;
-  virtual ~Factory() {}
-};
-
-
-class ArchersFactory : public Factory
-{
-public:
-  Warrior* createWarrior() {
-    return new Archer;
-  }
-};
-
-class HorsemanFactory : public Factory
-{
-public:
-	Warrior* createWarrior() {
-		return new Horseman;
-	}
-};
-
-
-
 
 int main(int argc, char* argv[])
 {
-	ArchersFactory* archers_factory = new ArchersFactory;
-	HorsemanFactory* horsman_factory = new HorsemanFactory;
-
-
-	std::vector<Warrior*> v;
-	v.push_back(horsman_factory->createWarrior());
-	v.push_back(archers_factory->createWarrior());
-
-	
-
-	for (int i = 0; i < v.size(); i++)
-		v[i]->info();
 
 
 	// Config system
-	EEPROM eeprom(SysConst::nmeaCfgFileName);
-	//NMEA nmea(eeprom, com, sysClk);
+	NMEA nmea(com, sysClk);
 	//NMEA n;
 	//bool res = eeprom.isErased();
 	//int i = sizeof(eeprom);

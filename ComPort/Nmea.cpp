@@ -3,7 +3,7 @@
 
 
 /************************************************************/
-bool NMEA::checkCfgEEPROM(nmeaCfgEEPROM_t& cfgEEPROM, uint8_t unprogValue)
+bool NMEA::checkCfgEEPROM(NmeaCfgEeprom& cfgEEPROM, uint8_t unprogValue)
 {
 	for (auto& chCfg : cfgEEPROM.chCfg) {
 		for (auto& cmd : chCfg.cmdPermits) {
@@ -28,29 +28,35 @@ bool NMEA::checkCfgEEPROM(nmeaCfgEEPROM_t& cfgEEPROM, uint8_t unprogValue)
  * @return 
 */
 
-NMEA::NMEA(nmeaCfgEEPROM_t& nmeaCfgEEPROM, std::vector<ComPort>& com, TimeBase& sysClk)
+NMEA::NMEA(std::vector<ComPort>& com, TimeBase& sysClk)
 	:m_com(com)
 {
-	// check setting in EEPROM and config as default if nessessary
-	if (checkCfgEEPROM(nmeaCfgEEPROM, 0x00) == false || checkCfgEEPROM(nmeaCfgEEPROM, 0xFF) == false) {
-		setCfgDefault(nmeaCfgEEPROM);
-	}
-	// config NMEA cfg 
-	for (int ch = 0; ch < SysConst::maxUARTChannel; ++ch) {
-		chFlags_t& chFl = m_flags[ch];
-		for (int cmd = NO; cmd < MAX_NMEACmdStrIndex; cmd++) {
-			chFl.cmd[cmd].permits = (cmdPermits_t)nmeaCfgEEPROM.chCfg[ch].cmdPermits[cmd];
-			chFl.cmd[cmd].counter = TIMEOUT;
-		} // end for cmd
-		chFl.BautRate = nmeaCfgEEPROM.chCfg[ch].BautRate;
-		chFl.TimeInterval = nmeaCfgEEPROM.chCfg[ch].TimeInterval;
-		chFl.TIDPriorityPermis = nmeaCfgEEPROM.chCfg[ch].TIDPriorityPermis;
-		chFl.ioUsedForUART.in = nmeaCfgEEPROM.chCfg[ch].ioUsedForUART.in;
-		chFl.ioUsedForUART.out = nmeaCfgEEPROM.chCfg[ch].ioUsedForUART.in;
-		//	nmeaFl[ch].PermisTx = 0;
-		//	nmeaFl[ch].ChechSumErrFlag = Off;
-	}
-	m_numOfTerminalChannel = nmeaCfgEEPROM.numOfTerminalChannel;
+	IEeprom* cfgEeprom = EepromMakerForNmea().makeObject();
+	auto cfg1 = cfgEeprom->getField();
+	
+	
+
+
+	//// check setting in EEPROM and config as default if nessessary
+	//if (checkCfgEEPROM(nmeaCfgEEPROM, 0x00) == false || checkCfgEEPROM(nmeaCfgEEPROM, 0xFF) == false) {
+	//	setCfgDefault(nmeaCfgEEPROM);
+	//}
+	//// config NMEA cfg 
+	//for (int ch = 0; ch < SysConst::maxUARTChannel; ++ch) {
+	//	chFlags_t& chFl = m_flags[ch];
+	//	for (int cmd = NO; cmd < MAX_NMEACmdStrIndex; cmd++) {
+	//		chFl.cmd[cmd].permits = (cmdPermits_t)nmeaCfgEEPROM.chCfg[ch].cmdPermits[cmd];
+	//		chFl.cmd[cmd].counter = TIMEOUT;
+	//	} // end for cmd
+	//	chFl.BautRate = nmeaCfgEEPROM.chCfg[ch].BautRate;
+	//	chFl.TimeInterval = nmeaCfgEEPROM.chCfg[ch].TimeInterval;
+	//	chFl.TIDPriorityPermis = nmeaCfgEEPROM.chCfg[ch].TIDPriorityPermis;
+	//	chFl.ioUsedForUART.in = nmeaCfgEEPROM.chCfg[ch].ioUsedForUART.in;
+	//	chFl.ioUsedForUART.out = nmeaCfgEEPROM.chCfg[ch].ioUsedForUART.in;
+	//	//	nmeaFl[ch].PermisTx = 0;
+	//	//	nmeaFl[ch].ChechSumErrFlag = Off;
+	//}
+	//m_numOfTerminalChannel = nmeaCfgEEPROM.numOfTerminalChannel;
 
 	sysClk.addObserver(*this, sysClk.EVT_1S);
 
@@ -82,9 +88,9 @@ NMEA::NMEA(nmeaCfgEEPROM_t& nmeaCfgEEPROM, std::vector<ComPort>& com, TimeBase& 
 }
 
 /************************************************************/
-void NMEA::setCfgDefault(nmeaCfgEEPROM_t& cfgEEPROM, char ch)
+void NMEA::setCfgDefault(NmeaCfgEeprom& cfgEEPROM, char ch)
 {
-	nmeaCfgEEPROM_t::CFG_CHANNEL_EEPROM_STRUCT& chCfg = cfgEEPROM.chCfg[ch];
+	NmeaCfgEeprom::CFG_CHANNEL_EEPROM_STRUCT& chCfg = cfgEEPROM.chCfg[ch];
 	bool isTerminalCh = cfgEEPROM.numOfTerminalChannel == ch;
 	// set baud 38400 for terminal channel and 4800 for another
 	if (isTerminalCh)
@@ -108,7 +114,7 @@ void NMEA::setCfgDefault(nmeaCfgEEPROM_t& cfgEEPROM, char ch)
 }
 
 /************************************************************/
-void NMEA::setCfgDefault(nmeaCfgEEPROM_t& cfgEEPROM)
+void NMEA::setCfgDefault(NmeaCfgEeprom& cfgEEPROM)
 {
 	cfgEEPROM.numOfTerminalChannel = 0;
 	for (int ch = 0; ch < SysConst::maxUARTChannel; ++ch) {

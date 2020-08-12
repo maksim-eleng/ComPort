@@ -1,4 +1,53 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <ClassDiagram MajorVersion="1" MinorVersion="1" MembersFormat="FullSignature">
+  <Class Name="EepromMaker">
+    <Position X="7.75" Y="0.75" Width="2" />
+    <TypeIdentifier>
+      <HashCode>gAAAAACAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=</HashCode>
+      <FileName>EEPROM.h</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="IEeprom">
+    <Position X="11" Y="0.75" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AACAAAAAAAAAAAAAAAAgBAAAAAAAAAAAAAAAAAAAAAA=</HashCode>
+      <FileName>EEPROM.h</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="Eeprom" Collapsed="true">
+    <Position X="13.5" Y="1.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAAACAAAAAAAAAABAAAgAAAAAAAAAAA=</HashCode>
+      <FileName>EEPROM.h</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="NMEA" Collapsed="true">
+    <Position X="15.25" Y="1.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>QCgAAAIEDEVAgRAGAAQQAgCABAgEAABIAAoIAUgAFAA=</HashCode>
+      <FileName>Nmea.h</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="NmeaCfgEeprom">
+    <Position X="11" Y="2.75" Width="1.5" />
+    <NestedTypes>
+      <Struct Name="NmeaCfgEeprom::CFG_CHANNEL_EEPROM_STRUCT" Collapsed="true">
+        <TypeIdentifier>
+          <NewMemberFileName>Nmea.h</NewMemberFileName>
+        </TypeIdentifier>
+      </Struct>
+    </NestedTypes>
+    <TypeIdentifier>
+      <HashCode>AAKAAABAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=</HashCode>
+      <FileName>Nmea.h</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="EepromMakerForNmea">
+    <Position X="7.75" Y="2.75" Width="2" />
+    <TypeIdentifier>
+      <HashCode>gAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=</HashCode>
+      <FileName>Nmea.h</FileName>
+    </TypeIdentifier>
+  </Class>
   <Font Name="Segoe UI" Size="9" />
 </ClassDiagram>
