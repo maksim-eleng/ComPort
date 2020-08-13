@@ -198,8 +198,12 @@
     <ClCompile Include="main.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="Object.h" />
-    <ClInclude Include="Product.h" />
+    <ClInclude Include="ConcreteProduct2.h" />
+    <ClInclude Include="Eeprom.h" />
+    <ClInclude Include="Nmea.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="ClassDiagram.cd" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
