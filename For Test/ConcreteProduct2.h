@@ -7,8 +7,10 @@
 */
 class ConcreteProduct2 : public Eeprom {
 public:
-  std::string Operation() const override {
-    return "{Result of the ConcreteProduct1}";
+  std::pair<uint8_t, std::vector<uint8_t>> Operation() override {
+    std::vector<uint8_t> tmp;
+    std::pair<uint8_t, std::vector<uint8_t>> pair;
+    return (pair);
   }
 };
 

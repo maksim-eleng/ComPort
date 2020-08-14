@@ -1,5 +1,6 @@
 #pragma once
 #include "Eeprom.h"
+#include <vector>
 
 /**
 * @brief Конкретный продукт NmeaEepromCfg представляет реализацию интерфейса Eeprom
@@ -27,20 +28,24 @@ public:
     uint8_t numOfTerminalChannel;			// channel number of UART for terminal 
   }nmeaCfgEeprom_t;
 
+  nmeaCfgEeprom_t m_nmeaCfgEeprom = {0};
+  const uint8_t m_EEPROM_ID = 1;
+
   NmeaCfgEeprom() {
-    std::memset(this, 0, sizeof(*this));
+    int sz = sizeof(*this);
+    //sz = sizeof(m_nmeaCfgEeprom);
   }
 
-  std::string Operation() const override {
-    std::string str;
-    
-    nmeaCfgEeprom_t nmeaCfg;
-    str.reserve(sizeof(nmeaCfg));
-    uint8_t* pb = reinterpret_cast<uint8_t*>(&nmeaCfg);
-    for (int i = 0; i < sizeof(nmeaCfg); ++i) {
-      str += pb[i];
+  std::pair<uint8_t, std::vector<uint8_t>> Operation() override 
+  {
+    std::pair<uint8_t, std::vector<uint8_t>> res;
+    res.first = m_EEPROM_ID;
+    res.second.reserve(sizeof(m_nmeaCfgEeprom));
+    uint8_t* pField = reinterpret_cast<uint8_t*>(&m_nmeaCfgEeprom);
+    for (size_t ii = 0; ii < sizeof(m_nmeaCfgEeprom); ++ii, ++pField) {
+      res.second.emplace_back(*pField);
     }
-    return std::move(str);
+    return res;
   }
 };
 

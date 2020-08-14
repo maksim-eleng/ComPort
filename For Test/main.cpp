@@ -29,12 +29,13 @@ void ClientCode(const CreatorEeprom& creator) {
 int main() {
 
   Eeprom* pEeprom = new NmeaCfgEeprom();
-  pEeprom->Operation();
+  std::pair<uint8_t, std::vector<uint8_t>> tmp = pEeprom->Operation();
+  delete pEeprom;
  
 
   std::cout << "App: Launched with the ConcreteCreator3.\n";
   CreatorEeprom* creator3 = new CreatorNmeaCfgEeprom();
-  
+
   ClientCode(*creator3);
   delete creator3;
 

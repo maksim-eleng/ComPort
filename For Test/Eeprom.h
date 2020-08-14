@@ -1,6 +1,6 @@
 #pragma once
 #include <iostream>
-#include <string>
+#include <vector>
 #include <map>
 
 /**
@@ -10,7 +10,7 @@
 class Eeprom {
 public:
   virtual ~Eeprom() {}
-  virtual std::string Operation() const = 0;
+  virtual std::pair<uint8_t, std::vector<uint8_t>> Operation() = 0;
 };
 
 
@@ -40,8 +40,10 @@ public:
   std::string SomeOperation() const {
     // Вызываем фабричный метод, чтобы получить объект-продукт.
     Eeprom* eeprom = this->FactoryMethod();
+    int sz = sizeof(eeprom);
+    sz = sizeof(*eeprom);
     // Далее, работаем с этим продуктом.
-    std::string result = "Creator: The same creator's code has just worked with " + eeprom->Operation();
+    std::string result = "Creator: The same creator's code has just worked with ";// +eeprom->Operation();
     delete eeprom;
     return result;
   }
