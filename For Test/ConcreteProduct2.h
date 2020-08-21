@@ -7,29 +7,8 @@
 */
 class ConcreteProduct2 : public Eeprom {
 public:
-  std::pair<uint8_t, std::vector<uint8_t>> Operation() override {
-    std::vector<uint8_t> tmp;
-    std::pair<uint8_t, std::vector<uint8_t>> pair;
-    return (pair);
-  }
-};
 
 
-/**
-* Конкретные Создатели переопределяют фабричный метод для того, чтобы изменить
-* тип результирующего продукта.
-*/
-class ConcreteCreator2 : public CreatorEeprom
-{
-  /**
-  * Обратите внимание, что сигнатура метода по-прежнему использует тип
-  * абстрактного продукта, хотя фактически из метода возвращается конкретный
-  * продукт. Таким образом, Создатель может оставаться независимым от
-  * конкретных классов продуктов.
-  */
-public:
-  Eeprom* FactoryMethod() const override {
-    return new ConcreteProduct2();
-  }
+
 };
 

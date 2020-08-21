@@ -26,7 +26,7 @@
     <ClInclude Include="Nmea.h">
       <Filter>Файлы заголовков</Filter>
     </ClInclude>
-    <ClInclude Include="ConcreteProduct2.h">
+    <ClInclude Include="EEPROMWin32.h">
       <Filter>Файлы заголовков</Filter>
     </ClInclude>
   </ItemGroup>

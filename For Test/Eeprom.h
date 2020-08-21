@@ -2,49 +2,63 @@
 #include <iostream>
 #include <vector>
 #include <map>
+#include "EEPROMWin32.h"
+
+
 
 /**
 * Интерфейс Продукта объявляет операции, которые должны выполнять все
 * конкретные продукты.
 */
-class Eeprom {
+class Eeprom: EEPROMWin32
+{
 public:
+  typedef struct EE_FIELD_STRUCT{
+    uint8_t objID = 0;
+    size_t size = 0;
+  }eepromFieldInfo_t;
+
+  typedef struct EE_RAW_STRUCT{
+    std::vector<eepromFieldInfo_t> eepromTable;
+    const char* eofTable = "-EOF_MAP-";
+    std::string data;
+  }eepromRaw_t;
+  
   virtual ~Eeprom() {}
-  virtual std::pair<uint8_t, std::vector<uint8_t>> Operation() = 0;
-};
 
-
-
-/**
-* Класс Создатель объявляет фабричный метод, который должен возвращать объект
-* класса Продукт. Подклассы Создателя обычно предоставляют реализацию этого
-* метода.
-*/
-
-class CreatorEeprom {
-  /**
-  * Обратите внимание, что Создатель может также обеспечить реализацию
-  * фабричного метода по умолчанию.
-  */
-public:
-  virtual ~CreatorEeprom(){};
-  virtual Eeprom* FactoryMethod() const = 0;
-
-  /**
-  * Также заметьте, что, несмотря на название, основная обязанность Создателя
-  * не заключается в создании продуктов. Обычно он содержит некоторую базовую
-  * бизнес-логику, которая основана на объектах Продуктов, возвращаемых
-  * фабричным методом. Подклассы могут косвенно изменять эту бизнес-логику,
-  * переопределяя фабричный метод и возвращая из него другой тип продукта.
-  */
-  std::string SomeOperation() const {
-    // Вызываем фабричный метод, чтобы получить объект-продукт.
-    Eeprom* eeprom = this->FactoryMethod();
-    int sz = sizeof(eeprom);
-    sz = sizeof(*eeprom);
-    // Далее, работаем с этим продуктом.
-    std::string result = "Creator: The same creator's code has just worked with ";// +eeprom->Operation();
-    delete eeprom;
-    return result;
+  Eeprom(const char* fileName = 0)
+    :EEPROMWin32(fileName)
+  {
   }
+  
+
+  bool loadEepromField(uint8_t id)
+  {
+    eepromRaw_t raw;
+
+    if (!readFile(m_raw)) {
+      return false;
+    }
+    // получить пол-во записей
+    uint8_t maxNum = m_raw.find(raw.eofTable) / raw.eepromTable.size();
+    size_t startRaw = m_raw.find(raw.eofTable) + sizeof(raw.eofTable);
+    const char* pData = m_raw.data();
+
+
+    // поиск смещения 
+
+  }
+
+  virtual bool saveEepromField() = 0;
+
+
+
+
+protected:
+
+private:
+  std::string m_raw = "";
 };
+
+
+

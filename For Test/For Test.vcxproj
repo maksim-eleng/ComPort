@@ -160,6 +160,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -198,8 +199,8 @@
     <ClCompile Include="main.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="ConcreteProduct2.h" />
     <ClInclude Include="Eeprom.h" />
+    <ClInclude Include="EEPROMWin32.h" />
     <ClInclude Include="Nmea.h" />
   </ItemGroup>
   <ItemGroup>

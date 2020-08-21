@@ -3,13 +3,12 @@
 #include <vector>
 
 /**
-* @brief Конкретный продукт NmeaEepromCfg представляет реализацию интерфейса Eeprom
+* @brief Product field 
 */
 class NmeaCfgEeprom:
   public Eeprom
 {
 public:
-
   typedef struct {
     struct CFG_CHANNEL_EEPROM_STRUCT
     {
@@ -20,7 +19,7 @@ public:
       // permis use in/out for UART.
       // If prohibited - in/out may be used as io
       struct {
-        uint8_t in : 4;	  // !=0 - io используется для UART. ==0 - как IO
+        uint8_t in  : 4;	// !=0 - io используется для UART. ==0 - как IO
         uint8_t out : 4;	// !=0 - io используется для UART. ==0 - как IO
       }ioUsedForUART;
     }chCfg[10];
@@ -28,41 +27,134 @@ public:
     uint8_t numOfTerminalChannel;			// channel number of UART for terminal 
   }nmeaCfgEeprom_t;
 
-  nmeaCfgEeprom_t m_nmeaCfgEeprom = {0};
-  const uint8_t m_EEPROM_ID = 1;
+  struct nmeaCfgEepromInfo_t {
+    const uint8_t m_EEPROM_ID = 1;
+    const size_t size = sizeof(nmeaCfgEeprom_t);
+  };
 
-  NmeaCfgEeprom() {
-    int sz = sizeof(*this);
-    //sz = sizeof(m_nmeaCfgEeprom);
+  virtual nmeaCfgEepromInfo_t getObjInfo() const {
+    return nmeaCfgEepromInfo_t();
   }
 
-  std::pair<uint8_t, std::vector<uint8_t>> Operation() override 
+  virtual bool loadEepromField()
   {
-    std::pair<uint8_t, std::vector<uint8_t>> res;
-    res.first = m_EEPROM_ID;
-    res.second.reserve(sizeof(m_nmeaCfgEeprom));
-    uint8_t* pField = reinterpret_cast<uint8_t*>(&m_nmeaCfgEeprom);
-    for (size_t ii = 0; ii < sizeof(m_nmeaCfgEeprom); ++ii, ++pField) {
-      res.second.emplace_back(*pField);
+
+    return 1;
+  }
+
+  // сохранение текущих настроек 
+  virtual bool saveEepromField() override
+  {
+    size_t sz = sizeof(nmeaCfgEeprom_t);
+    std::vector<uint8_t>raw;
+    raw.reserve(sz);
+    
+
+    return 1;
+  }
+
+};
+
+  class EepromMaker
+  {
+  public:
+    virtual ~EepromMaker() {}
+
+    /**
+     * @brief 
+    */
+    void save() {
+      Eeprom* obj = factrory();
+      obj->saveEepromField();
+
     }
-    return res;
-  }
-};
 
+    /**
+     * @brief 
+    */
+    void load() {
+      Eeprom* obj = factrory();
+      //obj->loadEepromField();
 
-class CreatorNmeaCfgEeprom : public CreatorEeprom 
-{
+    }
+    
+  private:
+    virtual Eeprom* factrory() = 0;
+
+  };
+
   /**
-  * Обратите внимание, что сигнатура метода по-прежнему использует тип
-  * абстрактного продукта, хотя фактически из метода возвращается конкретный
-  * продукт. Таким образом, Создатель может оставаться независимым от
-  * конкретных классов продуктов.
+   * @brief 
   */
-public:
-  CreatorNmeaCfgEeprom() = default;
+  class NmeaCfgEepromMaker
+    :public EepromMaker
+  {
+  public:
 
-  Eeprom* FactoryMethod() const {
-    return new NmeaCfgEeprom();
+  private:
+    virtual Eeprom* factrory() override {
+      return new NmeaCfgEeprom();
+    }
+
+  };
+
+
+
+
+class Nmea
+{
+public:
+
+  Nmea()
+  {
+    NmeaCfgEepromMaker cfg;
+    size_t sz = sizeof(cfg);
+    cfg.save();
+    
   }
+
+
+
+private:
+  
+
 };
 
+
+
+/**
+* @brief 
+* @return 
+*/
+//std::pair<uint8_t, std::vector<uint8_t>> eepromLoad()  
+//{
+//  std::pair<uint8_t, std::vector<uint8_t>> res;
+//  res.first = m_EEPROM_ID;
+//  size_t sz = this->getSize();
+//  res.second.reserve(sizeof(m_cfgEeprom));
+//  uint8_t* pField = reinterpret_cast<uint8_t*>(&m_cfgEeprom);
+//  for (size_t ii = 0; ii < sizeof(m_cfgEeprom); ++ii, ++pField) {
+//    res.second.emplace_back(*pField); 
+//  }
+//  return res;
+//}
+
+/**/
+//bool eepromSave(eeprom_t) 
+//{
+//
+//  return 1;
+//}
+
+//eeprom_t makeObject() 
+//{
+//  eeprom_t res;
+//  nmeaCfgEeprom_t cfg;
+//  res.first = m_EEPROM_ID;
+//  res.second.reserve(sizeof(nmeaCfgEeprom_t));
+//  uint8_t* pField = reinterpret_cast<uint8_t*>(&cfg);
+//  for (size_t ii = 0; ii < sizeof(nmeaCfgEeprom_t); ++ii, ++pField) {
+//    res.second.emplace_back(*pField); 
+//  }
+//  return res;
+//}
