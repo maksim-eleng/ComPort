@@ -30,48 +30,6 @@
 
 int main() {
 
-  class A {
-  public:
-    char a[100];
-    virtual size_t getSize() = 0;
-  };
-  class B : public A {
-  public:
-    char b[100];
-    virtual size_t getSize() { return sizeof(*this); }
-  };
-
-  B b;
-  int sz = sizeof(b);
-  //A* a = new B();
-  size_t s = b.getSize();
-
-  struct {
-    std::string str = "Temp hellow";
-    const char* str2 = { "Str2 Hellow" };
-    std::vector <uint8_t> v;
-    std::string str3 = "Temp2 hellow";
-  }tmp;
-
-  sz = sizeof(tmp);
-  uint8_t* p = reinterpret_cast<uint8_t*>(&tmp);
-
-  uint8_t mas[150];
-  int i;
-  for (i = 0; i < 10; ++i) {
-    tmp.v.push_back(i);
-  }
-
-
-  for (i = 0; i < tmp.str.size(); ++i) {
-    mas[i] = tmp.str.data()[i];
-  }
-  for (int k=0; tmp.str2[k] != 0; ++k, ++i) {
-    mas[i] = tmp.str2[k];
-  }
-  for (int k = 0; k < tmp.v.size(); ++k, ++i) {
-    mas[i] = tmp.v.data()[k];
-  }
 
 
   Nmea nmea;

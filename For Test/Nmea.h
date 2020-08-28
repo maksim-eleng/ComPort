@@ -28,7 +28,6 @@ public:
   }nmeaCfgEeprom_t;
 
   struct nmeaCfgEepromInfo_t {
-    const uint8_t m_EEPROM_ID = 1;
     const size_t size = sizeof(nmeaCfgEeprom_t);
   };
 
@@ -45,14 +44,19 @@ public:
   // сохранение текущих настроек 
   virtual bool saveEepromField() override
   {
-    size_t sz = sizeof(nmeaCfgEeprom_t);
-    std::vector<uint8_t>raw;
-    raw.reserve(sz);
+    eepromFieldInfo_t eeSet;
+    eeSet.objID = m_EEPROM_ID;
+    eeSet.size = sizeof(nmeaCfgEeprom_t);
+    eeSet.raw = new char[sizeof(nmeaCfgEeprom_t)];
+    nmeaCfgEeprom_t nmeaCfgEeprom;
+    memcpy(eeSet.raw, reinterpret_cast<char*>(&nmeaCfgEeprom), eeSet.size);
     
-
+    
+    delete[] eeSet.raw;
     return 1;
   }
-
+private:
+  const uint8_t m_EEPROM_ID = 1;
 };
 
   class EepromMaker
@@ -104,12 +108,13 @@ public:
 class Nmea
 {
 public:
+  friend NmeaCfgEeprom;
 
   Nmea()
   {
     NmeaCfgEepromMaker cfg;
-    size_t sz = sizeof(cfg);
     cfg.save();
+    
     
   }
 

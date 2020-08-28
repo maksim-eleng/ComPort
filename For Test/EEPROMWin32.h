@@ -48,6 +48,33 @@ protected:
 		return false;
 	}
 
+	/********************************************************/
+	bool readBlock(const size_t startInd, std::vector<char>& dst)
+	{
+		std::ifstream file(m_fileName, std::ios::binary);
+		if (file) {
+			file.seekg(startInd);
+			for (size_t i = dst.size(); i < dst.capacity(); ++i) {
+				dst.emplace_back(file.get());
+				if (!file.good())
+					return false;
+			}
+			return true;
+		}
+		return false;
+	}
+
+	/********************************************************/
+	bool writeBlock(const std::vector<char>& src, const size_t startInd)
+	{
+		std::ofstream file(m_fileName, std::ios::binary);
+		if (file) {
+			file.seekp(startInd);
+			file.write(src.data(), src.size());
+			return true;
+		}
+		return false;
+	}
 
 private:
 	std::string m_fileName = "";
