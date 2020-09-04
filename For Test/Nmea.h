@@ -50,7 +50,7 @@ public:
     eeSet.raw = new char[sizeof(nmeaCfgEeprom_t)];
     nmeaCfgEeprom_t nmeaCfgEeprom;
     memcpy(eeSet.raw, reinterpret_cast<char*>(&nmeaCfgEeprom), eeSet.size);
-    
+    this->m_EEPROM_ID
     
     delete[] eeSet.raw;
     return 1;

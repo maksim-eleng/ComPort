@@ -1,54 +1,44 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <ClassDiagram MajorVersion="1" MinorVersion="1" MembersFormat="FullSignature">
-  <Class Name="NmeaCfgEeprom">
-    <Position X="8.75" Y="3" Width="3.5" />
-    <Compartments>
-      <Compartment Name="Nested Types" Collapsed="false" />
-    </Compartments>
-    <NestedTypes>
-      <Typedef Name="NmeaCfgEeprom::nmeaCfgEeprom_t" Collapsed="true">
-        <TypeIdentifier>
-          <NewMemberFileName>Nmea.h</NewMemberFileName>
-        </TypeIdentifier>
-      </Typedef>
-      <Struct Name="NmeaCfgEeprom::__unnamed_struct_0018_1" Collapsed="true">
-        <TypeIdentifier>
-          <NewMemberFileName>Nmea.h</NewMemberFileName>
-        </TypeIdentifier>
-      </Struct>
-    </NestedTypes>
+  <Class Name="Eeprom" Collapsed="true">
+    <Position X="3.5" Y="2.75" Width="2" />
     <TypeIdentifier>
-      <HashCode>AAAAAAAAAIAAAAAAAAAAAAAAAAQAAAAAAAAAABAAAAA=</HashCode>
-      <FileName>Nmea.h</FileName>
-    </TypeIdentifier>
-  </Class>
-  <Class Name="Eeprom">
-    <Position X="8.75" Y="0.5" Width="3.5" />
-    <NestedTypes>
-      <Typedef Name="Eeprom::eeprom_t" Collapsed="true">
-        <TypeIdentifier>
-          <NewMemberFileName>Eeprom.h</NewMemberFileName>
-        </TypeIdentifier>
-      </Typedef>
-      <Struct Name="Eeprom::__unnamed_struct_0015_1" Collapsed="true">
-        <TypeIdentifier>
-          <NewMemberFileName>Eeprom.h</NewMemberFileName>
-        </TypeIdentifier>
-      </Struct>
-    </NestedTypes>
-    <TypeIdentifier>
-      <HashCode>AAAAAAAAAAAAAAAACAAAAAAAAAABAAAAAAAAAABAAAA=</HashCode>
+      <HashCode>AAEAAAAAAAAACAAACAAAAAAAAAABAAAAAAAAgAAAAAA=</HashCode>
       <FileName>Eeprom.h</FileName>
     </TypeIdentifier>
   </Class>
-  <Class Name="EEPROMWin32">
-    <Position X="13.25" Y="0.5" Width="3.75" />
-    <Members>
-      <Method Name="EEPROMWin32" Hidden="true" />
-      <Method Name="operator=" Hidden="true" />
-    </Members>
+  <Class Name="NmeaCfgEeprom" Collapsed="true">
+    <Position X="3.5" Y="4.25" Width="2" />
     <TypeIdentifier>
-      <HashCode>AAAAAEBAAAAABAAAAAAAAAAAAAAAAAAAAAAgAAAAACg=</HashCode>
+      <HashCode>AAEAAAAAAAAAAAAAAAAAAgAAAAQAAAAAAAAAAAABAAA=</HashCode>
+      <FileName>Nmea.h</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="EepromMaker" Collapsed="true">
+    <Position X="6.5" Y="1.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAACAAICAAAAAAAAAAAAAAAAAAAEAAAAAAAAAAAA=</HashCode>
+      <FileName>Nmea.h</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="NmeaCfgEepromMaker" Collapsed="true">
+    <Position X="6.5" Y="2.75" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAEAAAAAAAAAAAA=</HashCode>
+      <FileName>Nmea.h</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="Nmea" Collapsed="true">
+    <Position X="9" Y="1.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABAAAA=</HashCode>
+      <FileName>Nmea.h</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="EEPROMWin32" Collapsed="true">
+    <Position X="3.5" Y="1.5" Width="2" />
+    <TypeIdentifier>
+      <HashCode>AAAAgEBAAAAABAAAAAAAAAAAAAAAAAAAAEAgAAAAACg=</HashCode>
       <FileName>EEPROMWin32.h</FileName>
     </TypeIdentifier>
   </Class>
