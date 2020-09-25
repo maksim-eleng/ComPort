@@ -1,0 +1,39 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<ClassDiagram MajorVersion="1" MinorVersion="1" MembersFormat="NameAndType">
+  <Class Name="Prototype">
+    <Position X="5" Y="0.5" Width="2.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAgAAAAAAAAAAAAAgAAAAAAAAAAAAgQAAAAgAABA=</HashCode>
+      <FileName>Prototype.cpp</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="ConcretePrototype1">
+    <Position X="5.5" Y="3.5" Width="2.75" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAAAAAAAAAAAAAABCAAAAAAAAAAAABA=</HashCode>
+      <FileName>Prototype.cpp</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="ConcretePrototype2">
+    <Position X="2.25" Y="3.5" Width="2.75" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAAAAAAAAAAAAAAICAAAAAAAAAAAABA=</HashCode>
+      <FileName>Prototype.cpp</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="PrototypeFactory">
+    <Position X="2.25" Y="0.5" Width="2.25" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAEAAAAAAAAAAIAAAAAAAEAAIAAAAAAAAAAAAAA=</HashCode>
+      <FileName>Prototype.cpp</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Enum Name="Type">
+    <Position X="10.75" Y="0.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAAAAAAAAAACAAAAAAAAAAAAEAAAAAA=</HashCode>
+      <FileName>Prototype.cpp</FileName>
+    </TypeIdentifier>
+  </Enum>
+  <Font Name="Segoe UI" Size="9" />
+</ClassDiagram>

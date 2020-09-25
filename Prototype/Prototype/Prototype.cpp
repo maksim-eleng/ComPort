@@ -48,6 +48,7 @@ public:
 class ConcretePrototype1 : public Prototype {
 private:
   float concrete_prototype_field1_;
+  char str1[2][100] = { {"Str1: test string 1"},{"Str1: test string 2"} };
 
 public:
   ConcretePrototype1(string prototype_name, float concrete_prototype_field)
@@ -63,6 +64,14 @@ public:
   Prototype *Clone() const override {
     return new ConcretePrototype1(*this);
   }
+
+  virtual void Method(float prototype_field) override {
+    this->prototype_field_ = prototype_field;
+    std::cout << "Call Method from " << prototype_name_ << " with field : " << prototype_field << 
+      "and concrete field: " << concrete_prototype_field1_ << std::endl;
+    std::cout << str1[0] << "\n";
+  }
+
 };
 
 class ConcretePrototype2 : public Prototype {
